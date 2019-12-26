@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>pulsar_server</name>
+  <version>0.0.0</version>
+  <description>The pulsar_server package</description>
+
+  <maintainer email="nrh16@ic.ac.uk">Nick Hafner</maintainer>
+
+  <license>MIT</license>
+
+  <url type="website">https://github.com/Nickick-ICRS/pulsar</url>
+
+  <author email="nrh16@ic.ac.uk">Nick Hafner</author>
+
+  <buildtool_depend>catkin</buildtool_depend>
+  <depend>rospy</depend>
+  <depend>geometry_msgs</depend>
+  <depend>nav_msgs</depend>
+</package>
