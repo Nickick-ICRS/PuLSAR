@@ -1,0 +1,36 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+<xacro:macro name="wheel" params="y_pos name">
+    <link name="${name}_wheel_link">
+        <visual name="${name}_wheel_visual">
+            <origin xyz="0 0 0" rpy="1.57 0 0"/>
+            <geometry>
+                <mesh filename="$(find pulsar_description)/meshes/wheel.stl" 
+                      scale="0.001 0.001 0.001"/>
+            </geometry>
+        </visual>
+        <collision name="${name}_wheel_collision">
+            <origin xyz="0 0 0" rpy="1.57 0 0"/>
+            <geometry>
+                <cylinder radius="0.015" length="0.004"/>
+            </geometry>
+        </collision>
+        <inertia>
+            <origin xyz="0 0 0" rpy="0 0 0"/>
+            <mass value="0.005"/>
+            <inertia ixx="2.879e-7" ixy="0.0" ixz="0.0"
+                     iyy="5.625e-7" iyz="0.0" izz="2.879e-7"/>
+        </inertia>
+    </link>
+
+    <joint name="${name}_wheel_joint" type="continuous">
+        <origin xyz="0 ${y_pos} 0.015" rpy="0 0 0"/>
+        <limit effort="0.02" velocity="12"/>
+        <axis xyz="0 1 0"/>
+        <parent link="base_link"/>
+        <child link="${name}_wheel_link"/>
+    </joint>
+</xacro:macro>
+
+</robot>

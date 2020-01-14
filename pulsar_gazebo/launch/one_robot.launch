@@ -1,0 +1,19 @@
+<launch>
+    <!-- Launch Gazebo -->
+    <include file="$(find gazebo_ros)/launch/empty_world.launch">
+        <arg name="paused" value="false"/>
+        <arg name="use_sim_time" value="true"/>
+        <arg name="gui" value="true"/>
+        <arg name="recording" value="false"/>
+        <arg name="debug" value="false"/>
+        <arg name="verbose" value="true"/>
+    </include>
+
+    <!-- Load the robot description -->
+    <param name="robot_description"
+           command="xacro $(find pulsar_description)/urdf/pulsar.urdf.xacro"/>
+
+    <!-- Spawn the robot -->
+    <node name="spawn_robot" pkg="gazebo_ros" type="spawn_model" output="screen"
+          args="-param robot_description -urdf -model PuLSAR -x 0 -y 0 -z 0.1"/>
+</launch>

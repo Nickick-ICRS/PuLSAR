@@ -1,0 +1,14 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro"
+       name="PuLSAR">
+
+<xacro:include filename="$(find pulsar_description)/urdf/chassis/chassis.urdf.xacro"/>
+<xacro:include filename="$(find pulsar_description)/urdf/wheel/wheel.urdf.xacro"/>
+
+<link name="base_link"/>
+
+<xacro:chassis/>
+<xacro:wheel name="left" y_pos="0.02"/>
+<xacro:wheel name="right" y_pos="-0.02"/>
+
+</robot>
