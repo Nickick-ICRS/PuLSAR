@@ -13,6 +13,10 @@
     <param name="robot_description"
            command="xacro $(find pulsar_description)/urdf/pulsar.urdf.xacro"/>
 
+    <!-- state publisher for tf -->
+    <node name="robot_state_publisher" pkg="robot_state_publisher"
+          type="robot_state_publisher"/>
+
     <!-- Spawn the robot -->
     <node name="spawn_robot" pkg="gazebo_ros" type="spawn_model" output="screen"
           args="-param robot_description -urdf -model PuLSAR -x 0 -y 0 -z 0.1"/>

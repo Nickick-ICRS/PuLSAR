@@ -4,11 +4,21 @@
 
 <xacro:include filename="$(find pulsar_description)/urdf/chassis/chassis.urdf.xacro"/>
 <xacro:include filename="$(find pulsar_description)/urdf/wheel/wheel.urdf.xacro"/>
+<xacro:include filename="$(find pulsar_description)/urdf/laser_range_finder/laser_range_finder.urdf.xacro"/>
+<xacro:include filename="$(find pulsar_description)/urdf/imu/imu.urdf.xacro"/>
 
 <link name="base_link"/>
 
+<gazebo>
+    <self_collide>false</self_collide>
+</gazebo>
+
 <xacro:chassis/>
-<xacro:wheel name="left" y_pos="0.02"/>
-<xacro:wheel name="right" y_pos="-0.02"/>
+<xacro:wheel name="left" side="1"/>
+<xacro:wheel name="right" side="-1"/>
+<xacro:laser_range_finder name="left_range_finder" yaw="0.5236"/>
+<xacro:laser_range_finder name="middle_range_finder" yaw="0.0"/>
+<xacro:laser_range_finder name="right_range_finder" yaw="-0.5236"/>
+<xacro:imu/>
 
 </robot>

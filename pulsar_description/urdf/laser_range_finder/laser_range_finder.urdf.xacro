@@ -1,0 +1,70 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+<xacro:property name="cone_angle" value="0.26"/>
+<xacro:property name="update_rate" value="10"/>
+
+<xacro:macro name="laser_range_finder" params="name yaw">
+    <link name="${name}_link">
+        <visual name="${name}_visual">
+            <origin xyz="-0.010 -0.134 -0.012" rpy="1.57 0 1.57"/>
+            <geometry>
+                <mesh filename="$(find pulsar_description)/meshes/laser_range_PCB.stl" 
+                      scale="0.001 0.001 0.001"/>
+            </geometry>
+        </visual>
+        <collision name="${name}_collision">
+            <origin xyz="-0.002 0 -0.004" rpy="0 0 0"/>
+            <geometry>
+                <box size="0.002 0.012 0.015"/>
+            </geometry>
+        </collision>
+    </link>
+
+    <joint name="${name}_joint" type="fixed">
+        <origin xyz="${0.034*cos(yaw)-0.002} ${0.034*sin(yaw)} 0.019"
+                rpy="0 0 ${yaw}"/>
+        <parent link="chassis"/>
+        <child link="${name}_link"/>
+    </joint>
+
+    <gazebo reference="${name}_link">
+        <sensor type="ray" name="${name}_sensor">
+            <pose>0 0 0 0 0 0</pose>
+            <update_rate>${update_rate}</update_rate>
+            <ray>
+                <scan>
+                    <horizontal>
+                        <samples>5</samples>
+                        <resolution>1.0</resolution>
+                        <min_angle>${-cone_angle/2}</min_angle>
+                        <max_angle>${cone_angle/2}</max_angle>
+                    </horizontal>
+                    <vertical>
+                        <samples>5</samples>
+                        <resolution>1.0</resolution>
+                        <min_angle>${-cone_angle/2}</min_angle>
+                        <max_angle>${cone_angle/2}</max_angle>
+                    </vertical>
+                </scan>
+                <range>
+                    <min>0.01</min>
+                    <max>2.00</max>
+                    <resolution>0.01</resolution>
+                </range>
+            </ray>
+            <plugin filename="libgazebo_ros_range.so" 
+                    name="${name}_plugin">
+                <gaussianNoise>0.005</gaussianNoise>
+                <alwaysOn>true</alwaysOn>
+                <updateRate>${update_rate}</updateRate>
+                <topicName>${name}/range</topicName>
+                <frameName>${name}_link</frameName>
+                <fov>0.5</fov>
+                <radiation>infrared</radiation>
+            </plugin>
+        </sensor>
+    </gazebo>
+</xacro:macro>
+
+</robot>
