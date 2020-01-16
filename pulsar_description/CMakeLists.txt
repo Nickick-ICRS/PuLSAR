@@ -9,5 +9,5 @@ find_package(roslaunch)
 
 foreach(dir urdf)
     install(DIRECTORY ${dir}/
-        DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION/${DIR})
-endforeach
+        DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/${dir})
+endforeach(dir)
