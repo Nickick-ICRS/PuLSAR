@@ -7,19 +7,13 @@ find_package(catkin REQUIRED)
 
 find_package(Eigen3 REQUIRED)
 
-catkin_package(
-    INCLUDE_DIRS include
-    LIBRARIES pulsar_kalman_filter pulsar_odometry
-    DEPENDS Eigen3
-)
-
 include_directories(
-    include
+    include/pulsar_lib
     ${catkin_INCLUDE_DIRS}
 )
 
 add_library(pulsar_kalman_filter
-    src/kalman_filter/kalman_filter.cpp
+    src/pulsar_lib/kalman_filter/kalman_filter.cpp
 )
 
 add_dependencies(pulsar_kalman_filter
@@ -33,7 +27,7 @@ target_link_libraries(pulsar_kalman_filter
 )
 
 add_library(pulsar_odometry
-    src/odometry/odometry.cpp
+    src/pulsar_lib/odometry/odometry.cpp
 )
 
 add_dependencies(pulsar_odometry
@@ -46,7 +40,7 @@ target_link_libraries(pulsar_odometry
 )
 
 add_library(pulsar_motor_control
-    src/motor_control/motor_control.cpp
+    src/pulsar_lib/motor_control/motor_control.cpp
 )
 
 add_dependencies(pulsar_motor_control
@@ -58,14 +52,18 @@ target_link_libraries(pulsar_motor_control
     ${catkin_LIBRARIES}
 )
 
+catkin_package(
+    DEPENDS Eigen3
+    INCLUDE_DIRS include
+    LIBRARIES pulsar_kalman_filter pulsar_odometry pulsar_motor_control
+)
+
 install(TARGETS pulsar_kalman_filter pulsar_odometry pulsar_motor_control
     ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
     LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
     RUNTIME DESTINATION ${CATKIN_GLOBAL_BIN_DESTINATION}
 )
 
-install(DIRECTORY
+install(DIRECTORY include/pulsar_lib/
     DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}
-    FILES_MATCHING PATTERN "*.h"
-    PATTERN ".svn" EXCLUDE
 )

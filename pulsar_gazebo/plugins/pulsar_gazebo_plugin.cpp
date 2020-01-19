@@ -58,6 +58,90 @@ void PulsarGazeboPlugin::Load(
             "PulsarGazeboPlugin failed to get SDF parameter 'cmdVelTopic'. "
             << "Defaulting to '" << cmd_vel_topic << "'.");
 
+    // Kalman filter Q
+    Eigen::Matrix5f Q_est = Eigen::Matrix5f::Zero();
+    if(_sdf->HasElement("Q_x") && _sdf->HasElement("Q_y") 
+       && _sdf->HasElement("Q_th") && _sdf->HasElement("Q_x_dot")
+       && _sdf->HasElement("Q_th_dot")) {
+        Q_est(0, 0) = _sdf->Get<float>("Q_x");
+        Q_est(1, 1) = _sdf->Get<float>("Q_y");
+        Q_est(2, 2) = _sdf->Get<float>("Q_th");
+        Q_est(3, 3) = _sdf->Get<float>("Q_x_dot");
+        Q_est(4, 4) = _sdf->Get<float>("Q_th_dot");
+    }
+    else
+        ROS_WARN_STREAM(
+            "PulsarGazeboPlugin failed to get SDF parameters 'Q_x', 'Q_y', "
+            << "'Q_th', 'Q_x_dot' and 'Q_th_dot'. Defaulting EKF process "
+            << "noise Q to: '" << Q_est << "'.");
+
+    // Motor P control constant
+    float mtr_kp = 1;
+    if(_sdf->HasElement("motorKp"))
+        mtr_kp = _sdf->Get<float>("motorKp");
+    else
+        ROS_WARN_STREAM(
+            "PulsarGazeboPlugin failed to get SDF parameter 'motorKp'. "
+            << "Defaulting to '" << mtr_kp << "'.");
+
+    // Motor I control constant
+    float mtr_ki = 1;
+    if(_sdf->HasElement("motorKi"))
+        mtr_ki = _sdf->Get<float>("motorKi");
+    else
+        ROS_WARN_STREAM(
+            "PulsarGazeboPlugin failed to get SDF parameter 'motorKi'. "
+            << "Defaulting to '" << mtr_ki << "'.");
+
+    // Counts per revolution for the encoders
+    cpr_ = 4000;
+    if(_sdf->HasElement("cpr"))
+        cpr_ = _sdf->Get<int>("cpr");
+    else
+        ROS_WARN_STREAM(
+            "PulsarGazeboPlugin failed to get SDF parameter 'cpr'. "
+            << "Defaulting to '" << cpr_ << "'.");
+
+    // Radius of the wheels
+    float wheel_radius = 0.015f;
+    if(_sdf->HasElement("wheelRadius"))
+        wheel_radius = _sdf->Get<float>("wheelRadius");
+    else
+        ROS_WARN_STREAM(
+            "PulsarGazeboPlugin failed to get SDF parameter 'wheelRadius'. "
+            << "Defaulting to '" << wheel_radius << "'.");
+
+    // Separation of the wheels
+    float wheel_separation = 0.02f;
+    if(_sdf->HasElement("wheelSeparation"))
+        wheel_radius = _sdf->Get<float>("wheelSeparation");
+    else
+        ROS_WARN_STREAM(
+            "PulsarGazeboPlugin failed to get SDF parameter"
+            << " 'wheelSeparation'. Defaulting to '" << wheel_separation 
+            << "'.");
+
+    // Odometry update rate
+    odom_update_freq_;
+    if(_sdf->HasElement("odomUpdateRate"))
+        wheel_radius = _sdf->Get<float>("odomUpdateRate");
+    else
+        ROS_WARN_STREAM(
+            "PulsarGazeboPlugin failed to get SDF parameter "
+            << "'odomUpdateRate'. Defaulting to '" << odom_update_freq_
+            << "'.");
+
+    // Create the KalmanFilter object
+    ekf_ = std::unique_ptr<KalmanFilter>(new KalmanFilter(Q_est));
+    // Create the motor controller objects
+    l_motor_ = std::unique_ptr<MotorControl>(
+        new MotorControl(mtr_kp, mtr_ki));
+    r_motor_ = std::unique_ptr<MotorControl>(
+        new MotorControl(mtr_kp, mtr_ki));
+    // Create the odometry object
+    odom_ = std::unique_ptr<Odometry>(
+        new Odometry(cpr_, wheel_radius, wheel_separation));
+
     // Create a node handle within the namespace
     nh_ = new ros::NodeHandle(ns);
     odom_pub_ = nh_->advertise<nav_msgs::Odometry>(odom_topic, 10);

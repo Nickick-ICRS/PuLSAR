@@ -11,7 +11,12 @@
 #include <geometry_msgs/Twist.h>
 #include <nav_msgs/Odometry.h>
 
+#include <pulsar_lib/odometry/odometry.hpp>
+#include <pulsar_lib/kalman_filter/kalman_filter.hpp>
+#include <pulsar_lib/motor_control/motor_control.hpp>
+
 #include <thread>
+#include <memory>
 
 namespace gazebo {
 
@@ -58,17 +63,17 @@ private:
      * Other Stuff *
      ***************/
 
-    // Calculate target wheel velocities from a given target Twist
-    // input vx: x linear velocity w.r.t center of robot
-    // input vtheta: z angular velocity w.r.t center of robot
-    // output vl: left wheel angular velocity
-    // output vr: right wheel angular velocity
-    void calculate_required_wheel_velocities(
-        float vx, float vtheta, float *vl, float *vr);
-    // Kalman filter as used in the real PuLSAR robot
-    void update_kalman_filter();
-    // Raw odometry as used in the real PuLSAR robot
-    void calculate_raw_odometry();
+    // Classes used in the real robot
+    std::unique_ptr<KalmanFilter> ekf_;
+    std::unique_ptr<MotorControl> l_motor_;
+    std::unique_ptr<MotorControl> r_motor_;
+    std::unique_ptr<Odometry> odom_;
+
+    // Encoder counts per revolution - used to fake encoder pulses for the
+    // Odometry class
+    int cpr_;
+    // How regularly we update odometry
+    float odom_update_freq_;
 };
 
 }

@@ -7,6 +7,7 @@ find_package(catkin REQUIRED COMPONENTS
     roscpp
     nav_msgs
     geometry_msgs
+    pulsar_lib
 )
 
 find_package(gazebo REQUIRED)
@@ -14,13 +15,14 @@ find_package(gazebo REQUIRED)
 find_package(Boost REQUIRED)
 
 catkin_package(
-    CATKIN_DEPENDS gazebo_ros gazebo_plugins roscpp nav_msgs geometry_msgs
+    CATKIN_DEPENDS gazebo_ros gazebo_plugins roscpp nav_msgs geometry_msgs pulsar_lib
+    DEPENDS Boost gazebo
 )
 
 include_directories(
     plugins 
-    ${Boost_INCLUDE_DIR} 
     ${catkin_INCLUDE_DIRS} 
+    ${Boost_INCLUDE_DIR} 
     ${GAZEBO_INCLUDE_DIRS}
 )
 
