@@ -45,7 +45,20 @@ target_link_libraries(pulsar_odometry
     ${catkin_LIBRARIES}
 )
 
-install(TARGETS pulsar_kalman_filter pulsar_odometry
+add_library(pulsar_motor_control
+    src/motor_control/motor_control.cpp
+)
+
+add_dependencies(pulsar_motor_control
+    ${pulsar_motor_control_EXPORTED_TARGETS}
+    ${catkin_EXPORTED_TARGETS}
+)
+
+target_link_libraries(pulsar_motor_control
+    ${catkin_LIBRARIES}
+)
+
+install(TARGETS pulsar_kalman_filter pulsar_odometry pulsar_motor_control
     ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
     LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
     RUNTIME DESTINATION ${CATKIN_GLOBAL_BIN_DESTINATION}

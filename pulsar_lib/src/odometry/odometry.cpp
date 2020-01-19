@@ -13,14 +13,16 @@ Odometry::~Odometry() {
 }
 
 void Odometry::update(float dt) {
+    // This could be running with interrupts so quickly store the current 
+    // pulse count and reset the pulse counts
     float thl = l_w_c;
     float thr = r_w_c;
     l_w_c = 0;
     r_w_c = 0;
 
-    thl *= 2*3.1415926/cpr;
-    thr *= 2*3.1415926/cpr;
+    r_vel = thl * 2 * 3.1415926 / (cpr * dt);
+    l_vel = thr * 2 * 3.1415926 / (cpr * dt);
 
-    forwards_vel =  (thr + thl) / (2*wheel_circumference);
-    theta_vel = (thr - thl) / (wheel_separation*wheel_circumference);
+    forwards_vel =  (r_vel + l_vel) / (2*wheel_circumference);
+    theta_vel = (r_vel - l_vel) / (wheel_separation*wheel_circumference);
 }

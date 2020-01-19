@@ -21,14 +21,21 @@ public:
     // Get the current forward and angular velocities of the robot
     const float& get_forwards_vel() { return forwards_vel; };
     const float& get_theta_vel() { return theta_vel; };
+    const float& get_left_vel() { return l_vel; };
+    const float& get_right_vel() { return r_vel; };
 private:
     // theta and forwards (x) velocities
     float theta_vel;
     float forwards_vel;
 
-    // left and right wheel counts
-    int l_w_c;
-    int r_w_c;
+    // Wheel velocities
+    float l_vel;
+    float r_vel;
+
+    // left and right wheel counts - these probably will be modified during
+    // interrupts, hence the volatility
+    volatile int l_w_c;
+    volatile int r_w_c;
 
     // constants
     const int cpr;
