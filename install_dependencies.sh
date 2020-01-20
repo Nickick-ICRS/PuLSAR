@@ -6,6 +6,9 @@ set -e
 # Get path of this script
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 
+cd $DIR
+git submodule update --init --recursive
+
 echo "Installing ESP32 development toolchain"
 sudo apt install git wget flex bison gperf python python-pip python-setuptools python-serial python-click python-cryptography python-future python-pyparsing python-pyelftools cmake ninja-build ccache libffi-dev libssl-dev -y
 cd $DIR/esp-idf
