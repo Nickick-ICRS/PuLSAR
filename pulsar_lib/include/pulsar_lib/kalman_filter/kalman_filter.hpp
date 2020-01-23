@@ -25,7 +25,7 @@ public:
     // Update function
     // dt: delta time since last update cycle
     // z_k: measurements from sensors 
-    //      [x_dot, theta_dot, x_ddot, theta]
+    //      [theta, x_dot, theta_dot, x_ddot]
     // R_l: covariance matrix of sensor measurements
     void update(
         const float& dt, const Eigen::Vector4f& z_k,

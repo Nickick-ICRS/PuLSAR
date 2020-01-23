@@ -15,4 +15,6 @@ void MotorControl::update(float dt) {
         dt = 0.1;
     int_err += dt * err;
     output_power = kp * err + ki * int_err;
+    if(output_power > 1) output_power = 1;
+    if(output_power < -1) output_power = -1;
 }

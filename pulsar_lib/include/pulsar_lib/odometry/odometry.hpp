@@ -1,6 +1,11 @@
 #ifndef __ODOMETRY_HPP__
 #define __ODOMETRY_HPP__
 
+#include <cmath>
+
+// Number of samples used for determining the covariance
+#define COV_SAMPLES 5
+
 class Odometry {
 public:
     // cpr: encoder counts per full rotation
@@ -19,8 +24,8 @@ public:
     void update_right_wheel_count(bool dir) { dir ? r_w_c++ : r_w_c--; };
 
     // Get the current forward and angular velocities of the robot
-    const float& get_forwards_vel() { return forwards_vel; };
-    const float& get_theta_vel() { return theta_vel; };
+    const float& get_forwards_vel() { return forwards_vel[0]; };
+    const float& get_theta_vel() { return theta_vel[0]; };
     const float& get_left_vel() { return l_vel; };
     const float& get_right_vel() { return r_vel; };
 
@@ -31,10 +36,14 @@ public:
     // vth: target angular velocity
     void calculate_wheel_speeds(
         float *left, float *right, float vx, float vth);
+
+    // Calculate uncertainty in recent measurements
+    float calculate_cov_forwards_vel();
+    float calculate_cov_theta_vel();
 private:
     // theta and forwards (x) velocities
-    float theta_vel;
-    float forwards_vel;
+    float theta_vel[COV_SAMPLES];
+    float forwards_vel[COV_SAMPLES];
 
     // Wheel velocities
     float l_vel;
