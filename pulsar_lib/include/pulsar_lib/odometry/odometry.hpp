@@ -23,6 +23,14 @@ public:
     const float& get_theta_vel() { return theta_vel; };
     const float& get_left_vel() { return l_vel; };
     const float& get_right_vel() { return r_vel; };
+
+    // Calculate the wheel velocities required to move at a given velocity
+    // left: [output] left wheel speed
+    // right: [output] right wheel speed
+    // vx: target forwards velocity
+    // vth: target angular velocity
+    void calculate_wheel_speeds(
+        float *left, float *right, float vx, float vth);
 private:
     // theta and forwards (x) velocities
     float theta_vel;

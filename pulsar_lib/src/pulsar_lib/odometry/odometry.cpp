@@ -26,3 +26,10 @@ void Odometry::update(float dt) {
     forwards_vel =  (r_vel + l_vel) / (2*wheel_circumference);
     theta_vel = (r_vel - l_vel) / (wheel_separation*wheel_circumference);
 }
+
+void Odometry::calculate_wheel_speeds(
+    float *left, float *right, float vx, float vth)
+{
+    *left = wheel_circumference * (vx - wheel_separation * vth / 2);
+    *right = wheel_circumference * (vx + wheel_separation * vth / 2);
+}
