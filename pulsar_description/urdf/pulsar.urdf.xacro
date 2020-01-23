@@ -11,6 +11,36 @@
 
 <gazebo>
     <self_collide>false</self_collide>
+    <plugin name="pulsar_plugin" filename="libpulsar_gazebo_plugin.so">
+        <!-- ROS parameters -->
+        <namespace>/</namespace>
+        <odomTopic>odometry/filtered</odomTopic>
+        <cmdVelTopic>cmd_vel</cmdVelTopic>
+        <imuTopic>imu/data</imuTopic>
+
+        <!-- EKF parameters -->
+        <Q_x>1e-6</Q_x>
+        <Q_y>1e-6</Q_y>
+        <Q_th>1e-6</Q_th>
+        <Q_x_dot>1e-6</Q_x_dot>
+        <Q_th_dot>1e-6</Q_th_dot>
+
+        <!-- Motor controller parameters -->
+        <motorKp>20</motorKp>
+        <motorKi>0</motorKi>
+        <motorMaxTorque>1</motorMaxTorque>
+
+        <!-- Odometry parameters -->
+        <cpr>4000</cpr>
+        <wheelRadius>0.015</wheelRadius>
+        <wheelSeparation>0.02</wheelSeparation>
+        <updateRate>10</updateRate>
+        <odomUniformNoise>0.01</odomUniformNoise>
+
+        <!-- Wheel joints -->
+        <leftWheelJointName>left_wheel_joint</leftWheelJointName>
+        <rightWheelJointName>right_wheel_joint</rightWheelJointName>
+    </plugin>
 </gazebo>
 
 <xacro:chassis/>

@@ -61,7 +61,7 @@ void PulsarGazeboPlugin::Load(
     // ROS topic on which to listen for imu data
     std::string imu_topic = "imu/data";
     if(_sdf->HasElement("imuTopic"))
-        cmd_vel_topic = _sdf->Get<std::string>("imuTopic");
+        imu_topic = _sdf->Get<std::string>("imuTopic");
     else
         ROS_WARN_STREAM(
             "PulsarGazeboPlugin failed to get SDF parameter 'imuTopic'. "
