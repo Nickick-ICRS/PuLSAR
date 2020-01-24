@@ -55,9 +55,9 @@ private:
     volatile int r_w_c;
 
     // constants
-    const int cpr;
-    const int wheel_circumference;
-    const int wheel_separation;
+    const float cpr;
+    const float wheel_circumference;
+    const float wheel_separation;
 };
 
 #endif // __ODOMETRY_HPP__
