@@ -123,7 +123,7 @@ void PulsarGazeboPlugin::Load(
     // Separation of the wheels
     float wheel_separation = 0.02f;
     if(_sdf->HasElement("wheelSeparation"))
-        wheel_radius = _sdf->Get<float>("wheelSeparation");
+        wheel_separation = _sdf->Get<float>("wheelSeparation");
     else
         ROS_WARN_STREAM(
             "PulsarGazeboPlugin failed to get SDF parameter"
@@ -235,6 +235,9 @@ void PulsarGazeboPlugin::Load(
 }
 
 void PulsarGazeboPlugin::OnUpdate() {
+    // Update fake odometry pulses
+    update_odometry_measurements();
+
     // Calculate timestep
     auto dt = ros::Time::now() - last_update_time_;
     // Don't update the controllers etc. if we haven't waited long enough
@@ -285,7 +288,6 @@ void PulsarGazeboPlugin::OnUpdate() {
         l_motor_->update(dt_s);
         r_motor_->update(dt_s);
     }
-
     // Apply torques to wheels at every timestep
     float pc = l_motor_->get_power_percentage();
     l_wheel_joint_->SetForce(0, pc * motor_max_torque_);
@@ -324,15 +326,19 @@ void PulsarGazeboPlugin::update_odometry_measurements() {
     float delta = pos - l_prev_pos_;
     l_prev_pos_ = pos;
 
+    // Limit delta to +- pi
+    if(delta > 3.1415926) delta -= 2*3.1415926;
+    if(delta < -3.1415926) delta += 2*3.1415926;
+
     // Calculate number of pulses that should be generated
     int counts = cpr_ * delta / (2 * 3.1415926);
 
     // Add some random noise
     float noise = dist_(rand_gen_);
-    counts *= noise;
+    counts *= 1 + noise;
 
     // True if we're moving in a positive direction
-    bool dir = (counts == abs(counts));
+    bool dir = counts >= 0;
     counts = abs(counts);
 
     // Update the odometry measurement class
@@ -345,15 +351,19 @@ void PulsarGazeboPlugin::update_odometry_measurements() {
     delta = pos - r_prev_pos_;
     r_prev_pos_ = pos;
 
+    // Limit delta to +- pi
+    if(delta > 3.1415926) delta -= 2*3.1415926;
+    if(delta < -3.1415926) delta += 2*3.1415926;
+
     // Calculate number of pulses that should be generated
     counts = cpr_ * delta / (2 * 3.1415926);
 
     // Add some random noise
     noise = dist_(rand_gen_);
-    counts *= noise;
+    counts *= 1 + noise;
 
     // True if we're moving in a positive direction
-    dir = (counts == abs(counts));
+    dir = counts >= 0;
     counts = abs(counts);
 
     for(int c = 0; c < counts; c++) {

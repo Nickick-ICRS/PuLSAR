@@ -26,9 +26,9 @@
         <Q_th_dot>1e-6</Q_th_dot>
 
         <!-- Motor controller parameters -->
-        <motorKp>20</motorKp>
+        <motorKp>0.07</motorKp>
         <motorKi>0</motorKi>
-        <motorMaxTorque>1</motorMaxTorque>
+        <motorMaxTorque>0.006</motorMaxTorque>
 
         <!-- Odometry parameters -->
         <cpr>4000</cpr>

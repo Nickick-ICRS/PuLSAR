@@ -18,8 +18,8 @@ private:
     const float kp;
     const float ki;
 
-    float current_vel;
     float target_vel;
+    float current_vel;
     float output_power;
 
     float int_err;

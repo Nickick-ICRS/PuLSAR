@@ -19,6 +19,7 @@ void Odometry::update(float dt) {
     // pulse count and reset the pulse counts
     float thl = l_w_c;
     float thr = r_w_c;
+
     l_w_c = 0;
     r_w_c = 0;
 
@@ -30,16 +31,15 @@ void Odometry::update(float dt) {
         theta_vel[i] = theta_vel[i-1];
     }
 
-    forwards_vel[0] =  (r_vel + l_vel) / (2*wheel_circumference);
-    theta_vel[0] = (r_vel - l_vel) / (wheel_separation*wheel_circumference);
+    forwards_vel[0] =  wheel_circumference * (r_vel + l_vel) / 2.f;
+    theta_vel[0] = wheel_circumference * (r_vel - l_vel) / wheel_separation;
 }
 
 void Odometry::calculate_wheel_speeds(
     float *left, float *right, float vx, float vth)
 {
-    *left = wheel_circumference * (vx - wheel_separation * vth / 2.f);
-    *right = wheel_circumference * (vx + wheel_separation * vth / 2.f);
-
+    *left = (vx - wheel_separation * vth / 2.f) / wheel_circumference;
+    *right = (vx + wheel_separation * vth / 2.f) / wheel_circumference;
 }
 
 float Odometry::calculate_cov_forwards_vel() {

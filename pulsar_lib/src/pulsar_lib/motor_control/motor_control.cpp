@@ -1,7 +1,10 @@
 #include "motor_control/motor_control.hpp"
 
-MotorControl::MotorControl(float kp, float ki) :kp(kp), ki(ki) {
-    // ctor
+MotorControl::MotorControl(float kp, float ki) 
+    :kp(kp), ki(ki), target_vel(0), current_vel(0), output_power(0), 
+     int_err(0) 
+{
+   // ctor
 }
 
 MotorControl::~MotorControl() {
