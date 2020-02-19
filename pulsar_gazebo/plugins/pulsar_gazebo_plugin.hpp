@@ -79,6 +79,7 @@ private:
 
     // Fakes encoder data and passes it to the Odometry class below
     void update_odometry_measurements();
+    void update_odometry_noise();
 
     // Classes used in the real robot
     std::unique_ptr<KalmanFilter> ekf_;
@@ -95,6 +96,10 @@ private:
     // Left and right joint positions
     float l_prev_pos_;
     float r_prev_pos_;
+
+    // Left and right (fake) encoder counts
+    int l_counts_;
+    int r_counts_;
 
     // Maximum torque applied to a motor
     float motor_max_torque_;

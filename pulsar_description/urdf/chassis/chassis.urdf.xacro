@@ -37,17 +37,24 @@
         </collision>
 
         <inertial>
-            <origin xyz="-0.015 0 0.02" rpy="0 0 0"/>
+            <origin xyz="-0.01 0 0.02" rpy="0 0 0"/>
             <mass value="0.05"/>
             <inertia ixx="1.042e-5" ixy="0.0" ixz="0.0"
                      iyy="2.417e-5" iyz="0.0" izz="2.708e-5"/>
         </inertial>
 
     </link>
+
     <joint name="chassis_joint" type="fixed">
         <parent link="base_link"/>
         <child link="chassis"/>
     </joint>
+
+    <gazebo reference="chassis">
+        <mu>0.2</mu>
+        <mu2>0.2</mu2>
+        <min_depth>0.003</min_depth>
+    </gazebo>
 </xacro:macro>
 
 </robot>

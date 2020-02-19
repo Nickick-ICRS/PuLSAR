@@ -225,6 +225,12 @@ void PulsarGazeboPlugin::Load(
     // Store the current time
     last_update_time_ = ros::Time::now();
 
+    // Store current joint positions
+    l_prev_pos_ = l_wheel_joint_->Position();
+    r_prev_pos_ = r_wheel_joint_->Position();
+    l_counts_ = 0;
+    r_counts_ = 0;
+
     // Connect to the update event from gazebo
     update_connection_ = event::Events::ConnectWorldUpdateBegin(
         std::bind(&PulsarGazeboPlugin::OnUpdate, this));
@@ -244,6 +250,9 @@ void PulsarGazeboPlugin::OnUpdate() {
     if(dt >= ros::Duration(1 / update_freq_)) {
         last_update_time_ += dt;
         float dt_s = dt.sec + dt.nsec / 1e9;
+
+        // Update odometry noise and send to be processed
+        update_odometry_noise();
 
         // Update odometry
         odom_->update(dt_s);
@@ -287,6 +296,7 @@ void PulsarGazeboPlugin::OnUpdate() {
         r_motor_->set_current_vel(right_vel);
         l_motor_->update(dt_s);
         r_motor_->update(dt_s);
+        ROS_ERROR_STREAM("Lpc: " << l_motor_->get_power_percentage() << " Rpc: " << r_motor_->get_power_percentage());
     }
     // Apply torques to wheels at every timestep
     float pc = l_motor_->get_power_percentage();
@@ -324,51 +334,64 @@ void PulsarGazeboPlugin::update_odometry_measurements() {
     // Calculate change of angle
     float pos = l_wheel_joint_->Position();
     float delta = pos - l_prev_pos_;
-    l_prev_pos_ = pos;
 
     // Limit delta to +- pi
-    if(delta > 3.1415926) delta -= 2*3.1415926;
-    if(delta < -3.1415926) delta += 2*3.1415926;
+    while(delta > 3.1415926) delta -= 2*3.1415926;
+    while(delta < -3.1415926) delta += 2*3.1415926;
 
     // Calculate number of pulses that should be generated
-    int counts = cpr_ * delta / (2 * 3.1415926);
-
-    // Add some random noise
-    float noise = dist_(rand_gen_);
-    counts *= 1 + noise;
-
-    // True if we're moving in a positive direction
-    bool dir = counts >= 0;
-    counts = abs(counts);
-
-    // Update the odometry measurement class
-    for(int c = 0; c < counts; c++) {
-        odom_->update_left_wheel_count(dir);
-    }
+    int dcounts = cpr_ * delta / (2 * 3.1415926); 
+    l_counts_ += dcounts;
+    l_prev_pos_ += (2 * 3.1415926) * dcounts / cpr_;
 
     // Repeat for right wheel
     pos = r_wheel_joint_->Position();
     delta = pos - r_prev_pos_;
-    r_prev_pos_ = pos;
 
     // Limit delta to +- pi
-    if(delta > 3.1415926) delta -= 2*3.1415926;
-    if(delta < -3.1415926) delta += 2*3.1415926;
+    while(delta > 3.1415926) delta -= 2*3.1415926;
+    while(delta < -3.1415926) delta += 2*3.1415926;
 
     // Calculate number of pulses that should be generated
-    counts = cpr_ * delta / (2 * 3.1415926);
+    dcounts = cpr_ * delta / (2 * 3.1415926);
+    r_counts_ += dcounts;
+    r_prev_pos_ += (2 * 3.1415926) * dcounts / cpr_;
+}
+
+void PulsarGazeboPlugin::update_odometry_noise() {
+    /// LEFT
+
+    // Add some random noise
+    float noise = dist_(rand_gen_);
+    l_counts_ = (float)l_counts_ * (1.f + noise);
+
+    // True if we're moving in a positive direction
+    bool dir = (l_counts_ >= 0);
+    l_counts_ = abs(l_counts_);
+
+    // Update the odometry measurement class
+    for(int c = 0; c < l_counts_; c++) {
+        odom_->update_left_wheel_count(dir);
+    }
+
+    l_counts_ = 0;
+
+    /// RIGHT
 
     // Add some random noise
     noise = dist_(rand_gen_);
-    counts *= 1 + noise;
+    r_counts_ = (float)r_counts_ * (1.f + noise);
 
     // True if we're moving in a positive direction
-    dir = counts >= 0;
-    counts = abs(counts);
+    dir = (r_counts_ >= 0);
+    ROS_WARN_STREAM("DIR: " << dir << " drwc: " << r_counts_);
+    r_counts_ = abs(r_counts_);
 
-    for(int c = 0; c < counts; c++) {
+    for(int c = 0; c < r_counts_; c++) {
         odom_->update_right_wheel_count(dir);
     }
+
+    r_counts_ = 0;
 }
 
 }

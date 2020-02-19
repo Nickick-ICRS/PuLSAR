@@ -4,7 +4,7 @@
 <xacro:macro name="wheel" params="side name">
     <link name="${name}_wheel_link">
         <visual name="${name}_wheel_visual">
-            <origin xyz="-0.015 ${side*0.015} -0.015" rpy="1.57 0 0"/>
+            <origin xyz="-0.0155 ${side*0.015} -0.0155" rpy="1.57 0 0"/>
             <geometry>
                 <mesh filename="$(find pulsar_description)/meshes/wheel.stl" 
                       scale="0.001 0.001 ${side*0.001}"/>
@@ -27,11 +27,17 @@
     <joint name="${name}_wheel_joint" type="continuous">
         <origin xyz="0 ${side*0.02} 0.015" rpy="0 0 0"/>
         <limit effort="0.006" velocity="7"/>
-        <dynamics damping="${0.5*0.006/7}" friction="0.0"/>
+        <dynamics damping="${0.25*0.006/7}" friction="0.0"/>
         <axis xyz="0 1 0" rpy="0 0 0"/>
         <parent link="chassis"/>
         <child link="${name}_wheel_link"/>
     </joint>
+
+    <gazebo reference="${name}_wheel_link">
+        <mu>1000</mu>
+        <mu2>1000</mu2>
+        <min_depth>0.002</min_depth>
+    </gazebo>
 </xacro:macro>
 
 </robot>

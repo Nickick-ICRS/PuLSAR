@@ -3,7 +3,7 @@ project(pulsar_lib)
 
 add_compile_options(-std=c++11)
 
-find_package(catkin REQUIRED)
+find_package(catkin REQUIRED COMPONENTS roscpp)
 
 find_package(Eigen3 REQUIRED)
 

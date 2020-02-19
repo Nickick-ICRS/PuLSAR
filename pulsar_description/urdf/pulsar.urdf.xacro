@@ -26,15 +26,16 @@
         <Q_th_dot>1e-6</Q_th_dot>
 
         <!-- Motor controller parameters -->
-        <motorKp>0.07</motorKp>
-        <motorKi>0</motorKi>
+        <motorKp>0.09</motorKp>
+        <motorKi>0.0</motorKi>
+        <!--<motorMaxTorque>0.006</motorMaxTorque>-->
         <motorMaxTorque>0.006</motorMaxTorque>
 
         <!-- Odometry parameters -->
         <cpr>4000</cpr>
         <wheelRadius>0.015</wheelRadius>
-        <wheelSeparation>0.02</wheelSeparation>
-        <updateRate>10</updateRate>
+        <wheelSeparation>0.0375</wheelSeparation>
+        <updateRate>100</updateRate>
         <odomUniformNoise>0.01</odomUniformNoise>
 
         <!-- Wheel joints -->
