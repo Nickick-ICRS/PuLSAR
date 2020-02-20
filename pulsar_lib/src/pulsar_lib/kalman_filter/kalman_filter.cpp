@@ -1,4 +1,5 @@
 #include "kalman_filter/kalman_filter.hpp"
+#include <ros/ros.h>
 
 KalmanFilter::KalmanFilter(Eigen::Matrix5f Q_est, Eigen::Matrix5f P_0) {
     // H is an identity matrix at the top right and zero elsewhere

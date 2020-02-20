@@ -73,6 +73,9 @@ private:
     ros::CallbackQueue ros_queue_;
     std::thread callback_queue_thread_;
 
+    // Robot tf prefix for co-ordinate frames
+    std::string robot_tf_prefix_;
+
     /***************
      * Other Stuff *
      ***************/

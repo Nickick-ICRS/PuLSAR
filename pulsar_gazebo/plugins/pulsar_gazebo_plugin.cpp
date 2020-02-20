@@ -201,6 +201,25 @@ void PulsarGazeboPlugin::Load(
         return;
     }
 
+    robot_tf_prefix_ = "";
+    if(_sdf->HasElement("robotTfPrefix")) {
+        robot_tf_prefix_ = _sdf->Get<std::string>("robotTfPrefix");
+        // We want it to end in a slash ...
+        if(robot_tf_prefix_ != "") {
+            if(robot_tf_prefix_[robot_tf_prefix_.size() - 1] != '/') {
+                robot_tf_prefix_ += "/";
+            }
+        }
+        // ... unless it is just a slash in which case we don't
+        if(robot_tf_prefix_ == "/")
+            robot_tf_prefix_ = "";
+    }
+    else
+        ROS_WARN_STREAM(
+            "PulsarGazeboPlugin failed to get SDF parameter "
+            << "'robotTfPrefix'. Defaulting to '" << robot_tf_prefix_
+            << "'.");
+
     dist_ = std::uniform_real_distribution<float>(-odom_noise, odom_noise);
 
     // Create the KalmanFilter object
@@ -250,7 +269,6 @@ void PulsarGazeboPlugin::OnUpdate() {
     if(dt >= ros::Duration(1 / update_freq_)) {
         last_update_time_ += dt;
         float dt_s = dt.sec + dt.nsec / 1e9;
-        ROS_INFO_STREAM(dt_s);
 
         // Update odometry noise and send to be processed
         update_odometry_noise();
@@ -290,6 +308,10 @@ void PulsarGazeboPlugin::OnUpdate() {
         odom_msg.twist.covariance[0] = cov(3, 3);
         odom_msg.twist.covariance[35] = cov(4, 4);
 
+        odom_msg.header.stamp = ros::Time::now();
+        odom_msg.header.frame_id = robot_tf_prefix_ + "odom";
+        odom_msg.child_frame_id = robot_tf_prefix_ + "base_link";
+
         odom_pub_.publish(odom_msg);
 
         // Update motor controllers
@@ -297,7 +319,6 @@ void PulsarGazeboPlugin::OnUpdate() {
         r_motor_->set_current_vel(right_vel);
         l_motor_->update(dt_s);
         r_motor_->update(dt_s);
-        ROS_ERROR_STREAM("Lpc: " << l_motor_->get_power_percentage() << " Rpc: " << r_motor_->get_power_percentage());
     }
     // Apply torques to wheels at every timestep
     float pc = l_motor_->get_power_percentage();
@@ -325,7 +346,11 @@ void PulsarGazeboPlugin::cmd_vel_cb(
 }
 
 void PulsarGazeboPlugin::imu_cb(const sensor_msgs::ImuConstPtr& msg) {
-    imu_theta_ = 2 * acos(msg->orientation.w);
+    // Sometimes the quaternion isn't normalised, which breaks maths
+    double mag = sqrt(
+        pow(msg->orientation.x, 2) + pow(msg->orientation.y, 2) +
+        pow(msg->orientation.y, 2) + pow(msg->orientation.w, 2));
+    imu_theta_ = 2 * acos(msg->orientation.w/mag);
     imu_x_ddot_ = msg->linear_acceleration.x;
     imu_theta_cov_ = msg->orientation_covariance[8];
     imu_x_ddot_cov_ = msg->linear_acceleration_covariance[0];
@@ -377,7 +402,6 @@ void PulsarGazeboPlugin::update_odometry_noise() {
 
     // True if we're moving in a positive direction
     dir = (r_counts_ >= 0);
-    ROS_WARN_STREAM("DIR: " << dir << " drwc: " << r_counts_);
     r_counts_ = abs(r_counts_);
 
     for(int c = 0; c < r_counts_; c++) {
