@@ -24,13 +24,13 @@
             </geometry>
         </collision>
         <collision name="front_caster_collision">
-            <origin xyz="0.02 0 0.003" rpy="0 0 0"/>
+            <origin xyz="0.02 0 0.004" rpy="0 0 0"/>
             <geometry>
                 <sphere radius="0.003"/>
             </geometry>
         </collision>
         <collision name="rear_caster_collision">
-            <origin xyz="-0.025 0 0.003" rpy="0 0 0"/>
+            <origin xyz="-0.025 0 0.004" rpy="0 0 0"/>
             <geometry>
                 <sphere radius="0.003"/>
             </geometry>
@@ -51,9 +51,9 @@
     </joint>
 
     <gazebo reference="chassis">
-        <mu>0.2</mu>
-        <mu2>0.2</mu2>
-        <min_depth>0.003</min_depth>
+        <mu>0.02</mu>
+        <mu2>0.02</mu2>
+        <min_depth>0.002</min_depth>
     </gazebo>
 </xacro:macro>
 

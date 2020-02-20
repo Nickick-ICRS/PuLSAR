@@ -23,8 +23,8 @@ void Odometry::update(float dt) {
     l_w_c = 0;
     r_w_c = 0;
 
-    r_vel = thl * 2 * 3.1415926 / (cpr * dt);
-    l_vel = thr * 2 * 3.1415926 / (cpr * dt);
+    r_vel = thr * 2 * 3.1415926 / (cpr * dt);
+    l_vel = thl * 2 * 3.1415926 / (cpr * dt);
 
     for(int i = COV_SAMPLES-1; i != 0; i--) {
         forwards_vel[i] = forwards_vel[i-1];

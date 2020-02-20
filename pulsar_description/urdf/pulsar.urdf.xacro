@@ -26,8 +26,8 @@
         <Q_th_dot>1e-6</Q_th_dot>
 
         <!-- Motor controller parameters -->
-        <motorKp>0.09</motorKp>
-        <motorKi>0.0</motorKi>
+        <motorKp>0.08</motorKp>
+        <motorKi>0.8</motorKi>
         <!--<motorMaxTorque>0.006</motorMaxTorque>-->
         <motorMaxTorque>0.006</motorMaxTorque>
 

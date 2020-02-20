@@ -250,6 +250,7 @@ void PulsarGazeboPlugin::OnUpdate() {
     if(dt >= ros::Duration(1 / update_freq_)) {
         last_update_time_ += dt;
         float dt_s = dt.sec + dt.nsec / 1e9;
+        ROS_INFO_STREAM(dt_s);
 
         // Update odometry noise and send to be processed
         update_odometry_noise();
@@ -335,27 +336,19 @@ void PulsarGazeboPlugin::update_odometry_measurements() {
     float pos = l_wheel_joint_->Position();
     float delta = pos - l_prev_pos_;
 
-    // Limit delta to +- pi
-    while(delta > 3.1415926) delta -= 2*3.1415926;
-    while(delta < -3.1415926) delta += 2*3.1415926;
-
     // Calculate number of pulses that should be generated
     int dcounts = cpr_ * delta / (2 * 3.1415926); 
     l_counts_ += dcounts;
-    l_prev_pos_ += (2 * 3.1415926) * dcounts / cpr_;
+    l_prev_pos_ += (2 * 3.1415926) * (float)dcounts / cpr_;
 
     // Repeat for right wheel
     pos = r_wheel_joint_->Position();
     delta = pos - r_prev_pos_;
 
-    // Limit delta to +- pi
-    while(delta > 3.1415926) delta -= 2*3.1415926;
-    while(delta < -3.1415926) delta += 2*3.1415926;
-
     // Calculate number of pulses that should be generated
     dcounts = cpr_ * delta / (2 * 3.1415926);
     r_counts_ += dcounts;
-    r_prev_pos_ += (2 * 3.1415926) * dcounts / cpr_;
+    r_prev_pos_ += (2 * 3.1415926) * (float)dcounts / cpr_;
 }
 
 void PulsarGazeboPlugin::update_odometry_noise() {

@@ -4,29 +4,25 @@ import math
 import matplotlib.pyplot as plt
 
 import rospy
-from gazebo_msgs.srv import GetLinkState
+from gazebo_msgs.srv import GetJointProperties
 
 def main():
     rospy.init_node('pid_graph')
 
-    rospy.wait_for_service('/gazebo/get_link_state')
+    rospy.wait_for_service('/gazebo/get_joint_properties')
 
-    service = rospy.ServiceProxy('/gazebo/get_link_state', GetLinkState)
+    service = rospy.ServiceProxy(
+        '/gazebo/get_joint_properties', GetJointProperties)
 
     while not rospy.is_shutdown():
         lvel = 0
         rvel = 0
         for i in range(10):
-            l_state = service('PuLSAR::left_wheel_link', 'PuLSAR::base_link')
-            r_state = service('PuLSAR::left_wheel_link', 'PuLSAR::base_link')
-            lvel += math.sqrt(l_state.link_state.twist.angular.x ** 2 +
-                             l_state.link_state.twist.angular.y ** 2 +
-                             l_state.link_state.twist.angular.z ** 2)
-
-            rvel += math.sqrt(r_state.link_state.twist.angular.x ** 2 +
-                             r_state.link_state.twist.angular.y ** 2 +
-                             r_state.link_state.twist.angular.z ** 2)
-            rospy.sleep(0.05)
+            l_state = service('PuLSAR::left_wheel_joint')
+            r_state = service('PuLSAR::right_wheel_joint')
+            lvel += l_state.rate[0]
+            rvel += r_state.rate[0]
+            rospy.sleep(0.01)
         lvel /= 10
         rvel /= 10
 
