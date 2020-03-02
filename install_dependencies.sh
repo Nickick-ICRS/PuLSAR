@@ -14,10 +14,6 @@ sudo apt install git wget flex bison gperf python python-pip python-setuptools p
 cd $DIR/esp-idf
 ./install.sh
 
-# Source environment variables
-echo "source $DIR/esp-idf/export.sh" >> ~/.bashrc
-source ~/.bashrc
-
 echo "Installing ROS pkg requirements"
 cd $DIR/../..
 rosdep install --from-path src --ignore-src -r -y
