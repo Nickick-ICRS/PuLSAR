@@ -3,6 +3,7 @@
 
 #include <math.h>
 #include <Eigen/Geometry>
+#include <ros/ros.h>
 
 // Define useful matrices and vectors that aren't defined in Eigen by default
 namespace Eigen {

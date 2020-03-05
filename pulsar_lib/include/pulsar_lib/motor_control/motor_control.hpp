@@ -1,6 +1,8 @@
 #ifndef __MOTOR_CONTROL_HPP__
 #define __MOTOR_CONTROL_HPP__
 
+#include <ros/ros.h>
+
 class MotorControl {
 public:
     // This is a PI controller for a motor

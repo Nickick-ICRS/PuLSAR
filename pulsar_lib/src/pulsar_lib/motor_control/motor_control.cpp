@@ -22,4 +22,5 @@ void MotorControl::update(float dt) {
     output_power = kp * err + ki * int_err;
     if(output_power > 1) output_power = 1;
     if(output_power < -1) output_power = -1;
+    ROS_ERROR_STREAM("err: " << err << " int_err: " << int_err << " t: " << target_vel << " c: " << current_vel);
 }

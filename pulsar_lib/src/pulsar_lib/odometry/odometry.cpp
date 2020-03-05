@@ -38,8 +38,10 @@ void Odometry::update(float dt) {
 void Odometry::calculate_wheel_speeds(
     float *left, float *right, float vx, float vth)
 {
-    *left = (vx - wheel_separation * vth / 2.f) / wheel_circumference;
-    *right = (vx + wheel_separation * vth / 2.f) / wheel_circumference;
+    *left = 2 * 3.1415926 * (vx - wheel_separation * vth / 2.f)
+          / wheel_circumference;
+    *right = 2 * 3.1415926 * (vx + wheel_separation * vth / 2.f)
+           / wheel_circumference;
 }
 
 float Odometry::calculate_cov_forwards_vel() {

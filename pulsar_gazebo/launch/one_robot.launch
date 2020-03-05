@@ -1,12 +1,15 @@
 <launch>
     <!-- Launch Gazebo -->
     <include file="$(find gazebo_ros)/launch/empty_world.launch">
+        <arg name="world_name"
+             value="$(find pulsar_gazebo)/worlds/one_robot.world"/>
         <arg name="paused" value="false"/>
         <arg name="use_sim_time" value="true"/>
         <arg name="gui" value="true"/>
         <arg name="recording" value="false"/>
         <arg name="debug" value="false"/>
         <arg name="verbose" value="true"/>
+        <arg name="physics" value="bullet"/>
     </include>
 
     <!-- Load the robot description -->

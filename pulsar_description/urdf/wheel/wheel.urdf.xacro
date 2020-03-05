@@ -34,9 +34,10 @@
     </joint>
 
     <gazebo reference="${name}_wheel_link">
-        <mu>1000</mu>
-        <mu2>1000</mu2>
         <min_depth>0.002</min_depth>
+        <friction>0.8</friction>
+        <friction2>0.8</friction2>
+        <rolling_friction>0.01</rolling_friction>
     </gazebo>
 </xacro:macro>
 
