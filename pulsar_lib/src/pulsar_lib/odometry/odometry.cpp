@@ -31,7 +31,7 @@ void Odometry::update(float dt) {
         theta_vel[i] = theta_vel[i-1];
     }
 
-    forwards_vel[0] =  wheel_circumference * (r_vel + l_vel) / 2.f;
+    forwards_vel[0] =  wheel_circumference * (r_vel + l_vel) / (4 * 3.1415926);
     theta_vel[0] = wheel_circumference * (r_vel - l_vel) / wheel_separation;
 }
 
@@ -55,6 +55,9 @@ float Odometry::calculate_cov_forwards_vel() {
         var += (val - mean) * (val - mean);
     var /= COV_SAMPLES - 1;
 
+    if(var < 1e-12)
+        var = 1e-12;
+
     return sqrt(var);
 }
 
@@ -69,5 +72,8 @@ float Odometry::calculate_cov_theta_vel() {
         var += (val - mean) * (val - mean);
     var /= COV_SAMPLES - 1;
 
+    if(var < 1e-12)
+        var = 1e-12;
+    
     return sqrt(var);
 }

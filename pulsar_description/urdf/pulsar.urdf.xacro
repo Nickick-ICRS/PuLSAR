@@ -14,7 +14,7 @@
     <plugin name="pulsar_plugin" filename="libpulsar_gazebo_plugin.so">
         <!-- ROS parameters -->
         <namespace>/</namespace>
-        <odomTopic>odometry/filtered</odomTopic>
+        <odomTopic>odometry/raw</odomTopic>
         <cmdVelTopic>cmd_vel</cmdVelTopic>
         <imuTopic>imu/data</imuTopic>
         <robotTfPrefix></robotTfPrefix>

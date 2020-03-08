@@ -308,6 +308,12 @@ void PulsarGazeboPlugin::OnUpdate() {
         odom_msg.twist.covariance[0] = cov(3, 3);
         odom_msg.twist.covariance[35] = cov(4, 4);
 
+        // TODO: Fix EKF and remove this
+        odom_msg.twist.twist.linear.x = x_dot;
+        odom_msg.twist.twist.angular.z = th_dot;
+        odom_msg.twist.covariance[0] = x_dot_cov;
+        odom_msg.twist.covariance[35] = th_dot_cov;
+
         odom_msg.header.stamp = ros::Time::now();
         odom_msg.header.frame_id = robot_tf_prefix_ + "odom";
         odom_msg.child_frame_id = robot_tf_prefix_ + "base_link";
