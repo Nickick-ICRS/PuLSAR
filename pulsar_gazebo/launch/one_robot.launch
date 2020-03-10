@@ -1,58 +1,71 @@
 <launch>
+    <arg name="robot_ns" default="PuLSAR"/>
+    <arg name="launch_gazebo" default="true"/>
+    <arg name="start_x" default="0"/>
+    <arg name="start_y" default="0"/>
+    <arg name="start_yaw" default="0"/>
+    <arg name="start_z" value="0.02"/>
+
     <!-- Launch Gazebo -->
-    <include file="$(find gazebo_ros)/launch/empty_world.launch">
-        <arg name="world_name"
-             value="$(find pulsar_gazebo)/worlds/one_robot.world"/>
-        <arg name="paused" value="false"/>
-        <arg name="use_sim_time" value="true"/>
-        <arg name="gui" value="true"/>
-        <arg name="recording" value="false"/>
-        <arg name="debug" value="false"/>
-        <arg name="verbose" value="true"/>
-        <arg name="physics" value="bullet"/>
-    </include>
+    <group if="$(arg launch_gazebo)">
+        <include file="$(find gazebo_ros)/launch/empty_world.launch">
+            <arg name="world_name"
+                 value="$(find pulsar_gazebo)/worlds/one_robot.world"/>
+            <arg name="paused" value="false"/>
+            <arg name="use_sim_time" value="true"/>
+            <arg name="gui" value="true"/>
+            <arg name="recording" value="false"/>
+            <arg name="debug" value="false"/>
+            <arg name="verbose" value="true"/>
+            <arg name="physics" value="bullet"/>
+        </include>
+    </group>
 
-    <!-- Load the robot description -->
-    <param name="robot_description"
-           command="xacro $(find pulsar_description)/urdf/pulsar.urdf.xacro"/>
+    <group ns="$(arg robot_ns)">
+        <!-- Load the robot description -->
+        <param name="robot_description"
+               command="xacro $(find pulsar_description)/urdf/pulsar.urdf.xacro robot_ns:=$(arg robot_ns)"/>
 
-    <!-- state publisher for tf -->
-    <node name="robot_state_publisher" pkg="robot_state_publisher"
-          type="robot_state_publisher"/>
+        <!-- state publisher for tf -->
+        <node name="robot_state_publisher" pkg="robot_state_publisher"
+              type="robot_state_publisher">
+            <param name="tf_prefix" value="$(arg robot_ns)"/>
+        </node>
 
-    <!-- Spawn the robot -->
-    <node name="spawn_robot" pkg="gazebo_ros" type="spawn_model" output="screen"
-          args="-param robot_description -urdf -model PuLSAR -x 0 -y 0 -z 0.1"/>
+        <!-- Spawn the robot -->
+        <node name="spawn_robot" pkg="gazebo_ros" type="spawn_model" output="screen"
+              args="-param robot_description -urdf -model $(arg robot_ns) -x $(arg start_x) -y $(arg start_y) -z $(arg start_z) -Y $(arg start_yaw)"/>
 
-    <!-- Temporary ROS EKF until we fix the custom one -->
-    <node name="ekf" pkg="robot_localization" type="ekf_localization_node">
-        <param name="frequency" value="20"/>
-        <param name="sensor_timeout" value="0.05"/>
-        <param name="two_d_mode" value="true"/>
-        <param name="map_frame" value="map"/>
-        <param name="odom_frame" value="odom"/>
-        <param name="base_link_frame" value="base_link"/>
-        <param name="world_frame" value="odom"/>
-        <param name="transform_timeout" value="0"/>
+        <!-- Temporary ROS EKF until we fix the custom one -->
+        <node name="ekf" pkg="robot_localization" type="ekf_localization_node">
+            <param name="frequency" value="20"/>
+            <param name="sensor_timeout" value="0.05"/>
+            <param name="two_d_mode" value="true"/>
+            <param name="map_frame" value="map"/>
+            <param name="odom_frame" value="$(arg robot_ns)/odom"/>
+            <param name="base_link_frame" value="$(arg robot_ns)/base_link"/>
+            <param name="world_frame" value="$(arg robot_ns)/odom"/>
+            <param name="transform_timeout" value="0"/>
 
-        <param name="imu0" value="imu/data"/>
-        <param name="odom0" value="odometry/raw"/>
-        <rosparam param="imu0_config">[ false, false, false,
-                                        false, false, true ,
-                                        false, false, false,
-                                        false, false, false,
-                                        true , false, false ]</rosparam>
-        <rosparam param="odom0_config">[ false, false, false,
-                                         false, false, false,
-                                         true , true , false,
-                                         false, false, true ,
-                                         false, false, false ]</rosparam>
+            <param name="imu0" value="imu/data"/>
+            <param name="odom0" value="odometry/raw"/>
+            <rosparam param="imu0_config">[ false, false, false,
+                                            false, false, true ,
+                                            false, false, false,
+                                            false, false, false,
+                                            true , false, false ]</rosparam>
+            <rosparam param="odom0_config">[ false, false, false,
+                                             false, false, false,
+                                             true , true , false,
+                                             false, false, true ,
+                                             false, false, false ]</rosparam>
 
-        <param name="imu0_remove_gravitational_acceleration" value="true"/>
-        <param name="imu0_relative" value="false"/>
+            <param name="imu0_remove_gravitational_acceleration" value="true"/>
+            <param name="imu0_relative" value="false"/>
 
-        <param name="publish_tf" value="true"/>
-        <param name="smooth_lagged_data" value="true"/>
-        <param name="history_length" value="5"/>
-    </node>
+            <param name="publish_tf" value="true"/>
+            <param name="smooth_lagged_data" value="true"/>
+            <param name="history_length" value="5"/>
+        </node>
+    </group>
 </launch>

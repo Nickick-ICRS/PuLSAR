@@ -16,7 +16,7 @@
                 <gaussianNoise>0.01</gaussianNoise>
                 <xyzOffset>0 0 0</xyzOffset>
                 <rpyOffset>0 0 0</rpyOffset>
-                <frameName>base_link</frameName>
+                <frameName>$(arg robot_ns)/base_link</frameName>
             </plugin>
         </sensor>
     </gazebo>

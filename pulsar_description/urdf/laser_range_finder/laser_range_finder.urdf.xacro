@@ -59,7 +59,7 @@
                 <alwaysOn>true</alwaysOn>
                 <updateRate>${update_rate}</updateRate>
                 <topicName>${name}/range</topicName>
-                <frameName>${name}_link</frameName>
+                <frameName>$(arg robot_ns)/${name}_link</frameName>
                 <fov>0.5</fov>
                 <radiation>infrared</radiation>
             </plugin>

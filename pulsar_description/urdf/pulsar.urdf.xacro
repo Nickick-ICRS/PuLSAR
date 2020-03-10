@@ -7,17 +7,19 @@
 <xacro:include filename="$(find pulsar_description)/urdf/laser_range_finder/laser_range_finder.urdf.xacro"/>
 <xacro:include filename="$(find pulsar_description)/urdf/imu/imu.urdf.xacro"/>
 
+<xacro:arg name="robot_ns" default="/"/>
+
 <link name="base_link"/>
 
 <gazebo>
     <self_collide>false</self_collide>
     <plugin name="pulsar_plugin" filename="libpulsar_gazebo_plugin.so">
         <!-- ROS parameters -->
-        <namespace>/</namespace>
+        <namespace>$(arg robot_ns)</namespace>
         <odomTopic>odometry/raw</odomTopic>
         <cmdVelTopic>cmd_vel</cmdVelTopic>
         <imuTopic>imu/data</imuTopic>
-        <robotTfPrefix></robotTfPrefix>
+        <robotTfPrefix>$(arg robot_ns)</robotTfPrefix>
 
         <!-- EKF parameters -->
         <Q_x>1e-6</Q_x>
