@@ -33,11 +33,14 @@
         <child link="${name}_wheel_link"/>
     </joint>
 
-    <gazebo reference="${name}_wheel_link">
-        <min_depth>0.002</min_depth>
-        <friction>0.8</friction>
-        <friction2>0.8</friction2>
-        <rolling_friction>0.01</rolling_friction>
+    <gazebo reference="${name}_wheel_link::{name}_wheel_collision">
+        <friction>
+            <bullet>
+                <friction>0.8</friction>
+                <friction2>0.8</friction2>
+                <rolling_friction>0.01</rolling_friction>
+            </bullet>
+        </friction>
     </gazebo>
 </xacro:macro>
 

@@ -27,7 +27,7 @@ void KalmanFilter::update(
     const float& dt, const Eigen::Vector4f& z_k,
     const Eigen::Matrix4f& R_k)
 {
-    ROS_WARN_STREAM("dt: " << dt << " z_k: " << z_k << " R_k: " << R_k);
+    //ROS_WARN_STREAM("dt: " << dt << " z_k: " << z_k << " R_k: " << R_k);
     // Store previous states
     auto x_k_1 = x_k;
     auto P_k_1 = P_k;
@@ -43,7 +43,7 @@ void KalmanFilter::update(
     // Predicted covariance of state k given k-1
     P_k = F_k * P_k_1 * F_k.transpose() + L_k * Q_k * L_k.transpose();
 
-    ROS_WARN_STREAM("Predicted x_k: " << x_k);
+    //ROS_WARN_STREAM("Predicted x_k: " << x_k);
 
     /* Now the measurement update step */
 
@@ -61,7 +61,7 @@ void KalmanFilter::update(
     // Finally, update the state and covariance
     x_k = x_k + K * y_k;
     P_k = (Eigen::Matrix5f::Identity() - K * H) * P_k;
-    ROS_ERROR_STREAM("Updated x_k: " << x_k);
+    //ROS_ERROR_STREAM("Updated x_k: " << x_k);
 }
 
 void KalmanFilter::make_u(const float& dt, const Eigen::Vector5f& prev_x) {

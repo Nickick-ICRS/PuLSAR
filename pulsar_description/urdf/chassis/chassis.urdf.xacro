@@ -50,16 +50,42 @@
         <child link="chassis"/>
     </joint>
 
-    <gazebo reference="chassis">
-        <collide_without_contact>true</collide_without_contact>
-        <!-- For ODE physics engine -->
-        <min_depth>0.002</min_depth>
-        <mu>0.02</mu>
-        <mu2>0.02</mu2>
-        <!-- For bullet physics engine -->
-        <friction>0.02</friction>
-        <friction2>0.02</friction2>
-        <rolling_friction>1</rolling_friction>
+    <gazebo reference="chassis::front_caster_collision">
+        <contact>
+            <collide_without_contact>true</collide_without_contact>
+        </contact>
+        <friction>
+            <ode>
+                <min_depth>0.002</min_depth>
+                <mu>0.02</mu>
+                <mu2>0.02</mu2>
+            </ode>
+            <bullet>
+                <friction>0.02</friction>
+                <friction2>0.02</friction2>
+                <rolling_friction>1</rolling_friction>
+            </bullet>
+        </friction>
+    </gazebo>
+
+    <gazebo reference="chassis::rear_caster_collision">
+        <contact>
+            <collide_without_contact>true</collide_without_contact>
+            <ode>
+                <min_depth>0.002</min_depth>
+            </ode>
+        </contact>
+        <friction>
+            <ode>
+                <mu>0.02</mu>
+                <mu2>0.02</mu2>
+            </ode>
+            <bullet>
+                <friction>0.02</friction>
+                <friction2>0.02</friction2>
+                <rolling_friction>1</rolling_friction>
+            </bullet>
+        </friction>
     </gazebo>
 </xacro:macro>
 
