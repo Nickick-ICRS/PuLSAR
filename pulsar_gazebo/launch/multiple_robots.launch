@@ -1,0 +1,23 @@
+<launch>
+    <arg name="num_robots" default="5"/>
+
+    <include file="$(find gazebo_ros)/launch/empty_world.launch">
+        <arg name="world_name"
+             value="$(find pulsar_gazebo)/worlds/one_robot.world"/>
+        <arg name="paused" value="false"/>
+        <arg name="use_sim_time" value="true"/>
+        <arg name="gui" value="true"/>
+        <arg name="recording" value="false"/>
+        <arg name="debug" value="false"/>
+        <arg name="verbose" value="true"/>
+        <arg name="physics" value="bullet"/>
+    </include>
+
+    <node name="spawn_pulsar_script" type="spawn_pulsar_robot.py"
+          pkg="pulsar_gazebo">
+        <rosparam param="x_range">[-1, 1]</rosparam>
+        <rosparam param="y_range">[-1, 1]</rosparam>
+        <param name="num_robots" value="$(arg num_robots)"/>
+        <param name="robot_prefix" value="pulsar"/>
+    </node>
+</launch>
