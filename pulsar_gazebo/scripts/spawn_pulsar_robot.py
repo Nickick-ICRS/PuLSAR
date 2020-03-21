@@ -78,14 +78,15 @@ def main():
     launch_file_path = os.path.join(
         rospack.get_path("pulsar_gazebo"), "launch/one_robot.launch")
 
-    print(launch_file_path)
-
     uuid = roslaunch.rlutil.get_or_generate_uuid(None, False)
     roslaunch.configure_logging(uuid)
 
     for i in range(num_robots):
         robot_name = robot_prefix + "_{}".format(i)
         spawn_robot(uuid, launch_file_path, x_range, y_range, robot_name)
+
+    # If we just exit then the nodes are all shut down
+    rospy.spin()
 
 
 if __name__ == '__main__':
