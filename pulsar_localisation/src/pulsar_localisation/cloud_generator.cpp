@@ -2,9 +2,8 @@
 
 CloudGenerator::CloudGenerator(
     std::vector<std::string> range_topic_names, float data_time_range,
-    std::string odom_name)
-    :private_nh_("~"), odom_name_(odom_name),
-    tf2_(tf_buffer_)
+    std::string odom_name) 
+        :private_nh_("~"), odom_name_(odom_name), tf2_(tf_buffer_)
 {
     for(std::string name : range_topic_names) {
         range_subs_.emplace_back(

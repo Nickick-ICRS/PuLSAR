@@ -44,9 +44,9 @@ public:
      *                       all robots have the same odom name but
      *                       have separate tf_prefixes.
      */
-    CloudGenerator(std::vector<std::string> range_topic_names,
-                   float data_time_range,
-                   std::string odom_name = "odom");
+    CloudGenerator(
+        std::vector<std::string> range_topic_names, float data_time_range,
+        std::string odom_name = "odom");
     ~CloudGenerator();
 
     /**
