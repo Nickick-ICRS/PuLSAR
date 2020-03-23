@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro">
 
-<xacro:property name="cone_angle" value="0.26"/>
+<xacro:property name="cone_angle" value="0.09"/>
 <xacro:property name="update_rate" value="10"/>
 
 <xacro:macro name="laser_range_finder" params="name yaw">
@@ -31,6 +31,7 @@
     <gazebo reference="${name}_link">
         <sensor type="ray" name="${name}_sensor">
             <pose>0 0 0 0 0 0</pose>
+            <visualize>true</visualize>
             <update_rate>${update_rate}</update_rate>
             <ray>
                 <scan>

@@ -73,7 +73,7 @@ int main(int argc, char **argv) {
     // Ensure we fully cleanup before exiting
     node.reset();
     return 0;
-};
+}
 
 LocalisationNode::LocalisationNode() :running_(true) {
     // Get parameters from the ROS parameter server
@@ -82,13 +82,13 @@ LocalisationNode::LocalisationNode() :running_(true) {
     std::vector<std::string> all_topics;
     std::stringstream ss;
     std::string s;
-    for(auto pair : num_robots_) {
+    for(auto const & pair : num_robots_) {
         for(int i = 0; i < pair.second; i++) {
             ss.clear();
             s.clear();
             ss << i;
             ss >> s;
-            for(auto topic : range_sensor_topics_[pair.first]) {
+            for(auto const & topic : range_sensor_topics_[pair.first]) {
                 all_topics.push_back(pair.first+s+"/"+topic);
             }
         }
@@ -108,6 +108,15 @@ void LocalisationNode::loop() {
     while(running_) {
         std::this_thread::sleep_for(std::chrono::milliseconds(1000));
         cloud_gen_->publish_cloud("pulsar_0");
+        cloud_gen_->publish_cloud("pulsar_1");
+        cloud_gen_->publish_cloud("pulsar_2");
+        cloud_gen_->publish_cloud("pulsar_3");
+        cloud_gen_->publish_cloud("pulsar_4");
+        cloud_gen_->publish_cloud("pulsar_5");
+        cloud_gen_->publish_cloud("pulsar_6");
+        cloud_gen_->publish_cloud("pulsar_7");
+        cloud_gen_->publish_cloud("pulsar_8");
+        cloud_gen_->publish_cloud("pulsar_9");
     }
 }
 
