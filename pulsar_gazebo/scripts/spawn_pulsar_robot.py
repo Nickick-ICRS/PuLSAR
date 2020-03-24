@@ -6,6 +6,8 @@ import roslaunch
 import rospkg
 import rospy
 
+from std_srvs.srv import Empty
+
 
 def spawn_robot(uuid, launch_file_path, x_range, y_range, ns):
     cli_args = [launch_file_path,
@@ -72,6 +74,11 @@ def main():
     random.seed(None)
     rospy.init_node("spawn_pulsar_script")
 
+    rospy.wait_for_service("/gazebo/pause_physics")
+    rospy.wait_for_service("/gazebo/unpause_physics")
+    pause_gazebo = rospy.ServiceProxy("/gazebo/pause_physics", Empty)
+    unpause_gazebo = rospy.ServiceProxy("/gazebo/unpause_physics", Empty)
+
     x_range, y_range, num_robots, robot_prefix = get_params()
 
     rospack = rospkg.RosPack()
@@ -81,9 +88,13 @@ def main():
     uuid = roslaunch.rlutil.get_or_generate_uuid(None, False)
     roslaunch.configure_logging(uuid)
 
+    pause_gazebo()
+
     for i in range(num_robots):
         robot_name = robot_prefix + "_{}".format(i)
         spawn_robot(uuid, launch_file_path, x_range, y_range, robot_name)
+
+    unpause_gazebo()
 
     # If we just exit then the nodes are all shut down
     rospy.spin()
