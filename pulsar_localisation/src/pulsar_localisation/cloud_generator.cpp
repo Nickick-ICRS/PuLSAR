@@ -1,9 +1,10 @@
 #include "cloud_generator.hpp"
 
 CloudGenerator::CloudGenerator(
-    std::vector<std::string> range_topic_names, float data_time_range,
+    std::vector<std::string> range_topic_names, float history_length,
     std::string odom_name) 
-        :private_nh_("~"), odom_name_(odom_name), tf2_(tf_buffer_)
+        :private_nh_("~"), odom_name_(odom_name), tf2_(tf_buffer_),
+        history_length_(history_length)
 {
     for(std::string name : range_topic_names) {
         range_subs_.emplace_back(
@@ -19,7 +20,9 @@ CloudGenerator::~CloudGenerator() {
 }
 
 void CloudGenerator::publish_cloud(std::string name) {
+    // Initialise reference with a cloud we know exists
     pcl::PointCloud<pcl::PointXYZI>& cloud = full_cloud_;
+    std::lock_guard<std::recursive_mutex> lock(robot_cloud_muts_[name]);
     try {
         cloud = robot_clouds_.at(name);
     }
@@ -42,7 +45,53 @@ void CloudGenerator::publish_cloud(std::string name) {
 }
 
 void CloudGenerator::publish_full_cloud() {
+    std::lock_guard<std::mutex> lock(full_cloud_mut_);
     full_cloud_pub_.publish(convert_cloud(full_cloud_, "map"));
+}
+
+void CloudGenerator::clean_all_clouds() {
+    for(auto & pair : robot_clouds_) {
+        std::lock_guard<std::recursive_mutex> lock(
+            robot_cloud_muts_[pair.first]);
+        clean_cloud(pair.second);
+    }
+    std::lock_guard<std::mutex> lock(full_cloud_mut_);
+    clean_cloud(full_cloud_);
+}
+
+void CloudGenerator::clean_cloud(std::string name) {
+    // Initialise reference with a cloud we know exists
+    pcl::PointCloud<pcl::PointXYZI>& cloud = full_cloud_;
+    try {
+        cloud = robot_clouds_.at(name);
+    }
+    catch(std::out_of_range) {
+        ROS_WARN_STREAM(
+            "[CloudGenerator]: No robots with name '" << name 
+            << "' have data stored within the cloud generator.");
+        return;
+    }
+    std::lock_guard<std::recursive_mutex> lock(robot_cloud_muts_[name]);
+    clean_cloud(cloud);
+}
+
+void CloudGenerator::clean_cloud(pcl::PointCloud<pcl::PointXYZI>& cloud) {
+    // Calculate the cutoff point
+    ros::Time cutoff_ros;
+    try {
+        cutoff_ros = (ros::Time::now() - ros::Duration(history_length_));
+    }
+    catch(std::runtime_error) {
+        // This means that history_length_ seconds have not passed yet
+        return;
+    }
+    float cutoff = cutoff_ros.sec + cutoff_ros.nsec / 1e9;
+    // Remove the points which are too old
+    for(auto it = cloud.begin(); it != cloud.end(); it++) {
+        if(it->intensity < cutoff) {
+            it = --cloud.erase(it);
+        }
+    }
 }
 
 void CloudGenerator::range_cb(const sensor_msgs::RangeConstPtr& msg) {
@@ -87,7 +136,10 @@ void CloudGenerator::range_cb(const sensor_msgs::RangeConstPtr& msg) {
     pcl_point.z = point.point.z;
     pcl_point.intensity = 
         point.header.stamp.sec + point.header.stamp.nsec / 1e9;
+    std::lock_guard<std::recursive_mutex> lock(robot_cloud_muts_[prefix]);
     robot_clouds_[prefix].push_back(pcl_point);
+
+    // TODO: Add the point to the full cloud
 }
 
 sensor_msgs::PointCloud2 CloudGenerator::convert_cloud(
@@ -100,4 +152,3 @@ sensor_msgs::PointCloud2 CloudGenerator::convert_cloud(
     ros_cloud.header.frame_id = frame_name;
     return ros_cloud;
 }
-

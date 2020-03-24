@@ -105,8 +105,11 @@ LocalisationNode::~LocalisationNode() {
 }
 
 void LocalisationNode::loop() {
+    ros::Rate sleeper(100);
     while(running_) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+        cloud_gen_->clean_all_clouds();
+        sleeper.sleep();
+
         cloud_gen_->publish_cloud("pulsar_0");
         cloud_gen_->publish_cloud("pulsar_1");
         cloud_gen_->publish_cloud("pulsar_2");

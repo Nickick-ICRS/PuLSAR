@@ -10,6 +10,7 @@
  */
 
 #include <memory>
+#include <mutex>
 #include <string>
 #include <sstream>
 #include <vector>
@@ -36,7 +37,7 @@ public:
      *                          data should be read and incorporated into
      *                          the whole point cloud.
      *
-     * @param data_time_range Data older than this number of seconds will be
+     * @param history_length Data older than this number of seconds will be
      *                        discarded and removed from the cloud.
      *
      * @param odom_name The name of the odom of the robots.
@@ -45,7 +46,7 @@ public:
      *                       have separate tf_prefixes.
      */
     CloudGenerator(
-        std::vector<std::string> range_topic_names, float data_time_range,
+        std::vector<std::string> range_topic_names, float history_length,
         std::string odom_name = "odom");
     ~CloudGenerator();
 
@@ -59,10 +60,38 @@ public:
     void publish_cloud(std::string name);
 
     /**
-     * Publishes the full point cloud including data from each robot
+     * Publishes the full point cloud including data from each robot.
      */
     void publish_full_cloud();
+
+    /**
+     * @brief Updates all point clouds by removing old data.
+     *
+     * Updates all point clouds by removing any points with intensity values
+     * lower than the current time - history_length_.
+     */
+    void clean_all_clouds();
+
+    /**
+     * @brief Updates a single point cloud by removing old data.
+     *
+     * Updates a single point cloud by removing any points with intensity
+     * values lower than the current time - history_length_.
+     *
+     * @param name The name (tf_prefix of the robot) of the point cloud.
+     */
+    void clean_cloud(std::string name);
 private:
+    /**
+     * @brief Updates a single point cloud by removing old data.
+     *
+     * Updates a single point cloud by removing any points with intensity
+     * values lower than the current time - history_length_.
+     *
+     * @param cloud The point cloud to be updated.
+     */
+    void clean_cloud(pcl::PointCloud<pcl::PointXYZI>& cloud);
+
     /**
      * Callback for range finder data from one or more PuLSAR robots.
      *
@@ -100,12 +129,26 @@ private:
      */
     pcl::PointCloud<pcl::PointXYZI> full_cloud_;
     std::map<std::string, pcl::PointCloud<pcl::PointXYZI>> robot_clouds_;
+    // Mutexes for thread safety
+    std::mutex full_cloud_mut_;
+    /**
+     * std::recursive_mutex is used here as there may be some functions
+     * which lock and then call another function which also locks. This
+     * *shouldn't* happen, but a simple programmer mistake could cause
+     * some deadlocks so best to avoid it.
+     */
+    std::map<std::string, std::recursive_mutex> robot_cloud_muts_;
 
     /**
      * Name of the odom frame for each robot - assumed that each robot
      * is separated by a tf_prefix
      */
     std::string odom_name_;
+
+    /**
+     * Point cloud data is only stored for this long.
+     */
+    float history_length_;
 };
 
 #endif // __CLOUD_GENERATOR_HPP__
