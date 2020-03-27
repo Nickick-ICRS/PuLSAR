@@ -28,7 +28,7 @@ Run
 
 to generate the initial workspace. After this, clone this repository into the src folder:
 
-`cd catkin_ws/src && git clone <this package url>`
+`cd src && git clone <this package url>`
 
 Install the required dependencies:
 

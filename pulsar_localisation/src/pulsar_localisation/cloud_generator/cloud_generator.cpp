@@ -1,4 +1,4 @@
-#include "cloud_generator.hpp"
+#include "cloud_generator/cloud_generator.hpp"
 
 CloudGenerator::CloudGenerator(
     std::vector<std::string> range_topic_names, float history_length,
@@ -27,7 +27,7 @@ void CloudGenerator::publish_cloud(std::string name) {
         cloud = robot_clouds_.at(name);
     }
     catch(std::out_of_range) {
-        ROS_WARN_STREAM(
+        ROS_WARN_STREAM_DELAYED_THROTTLE(5, 
             "[CloudGenerator]: No robots with name '" << name 
             << "' have data stored within the cloud generator.");
         return;
@@ -66,7 +66,7 @@ void CloudGenerator::clean_cloud(std::string name) {
         cloud = robot_clouds_.at(name);
     }
     catch(std::out_of_range) {
-        ROS_WARN_STREAM(
+        ROS_WARN_STREAM_DELAYED_THROTTLE(5, 
             "[CloudGenerator]: No robots with name '" << name 
             << "' have data stored within the cloud generator.");
         return;

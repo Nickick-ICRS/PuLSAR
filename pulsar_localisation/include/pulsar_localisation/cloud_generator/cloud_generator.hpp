@@ -1,14 +1,6 @@
 #ifndef __CLOUD_GENERATOR_HPP__
 #define __CLOUD_GENERATOR_HPP__
 
-/// Generates point clouds from range data.
-/**
- * Class to process range data from multiple PuLSARs and store the data
- * in point clouds for processing. Data is stored for a certain amount of
- * time and the timestamps of the data are stored within the point clouds
- * as intensity values.
- */
-
 #include <memory>
 #include <mutex>
 #include <string>
@@ -28,6 +20,14 @@
 #include <tf2_ros/transform_listener.h>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 
+/**
+ * @brief Generates point clouds from range data.
+ *
+ * Class to process range data from multiple PuLSARs and store the data
+ * in point clouds for processing. Data is stored for a certain amount of
+ * time and the timestamps of the data are stored within the point clouds
+ * as intensity values.
+ */
 class CloudGenerator {
 public:
     /**

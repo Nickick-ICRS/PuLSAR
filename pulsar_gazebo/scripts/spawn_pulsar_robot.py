@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import os
 import random
+import math
 
 import roslaunch
 import rospkg
@@ -10,13 +11,19 @@ from std_srvs.srv import Empty
 
 
 def spawn_robot(uuid, launch_file_path, x_range, y_range, ns):
+    sx = random.uniform(x_range[0], x_range[1]) 
+    sy = random.uniform(y_range[0], y_range[1]) 
+    syaw = random.uniform(0, 6.28)
+
+    rospy.set_param(
+        "/"+ns+"/initial_pose", 
+        [sx, sy, 0, 0, 0, math.sin(syaw/2), math.cos(syaw/2)])
+
     cli_args = [launch_file_path,
                 "launch_gazebo:=false", 
-                "start_x:={}".format(
-                    random.uniform(x_range[0], x_range[1])), 
-                "start_y:={}".format(
-                    random.uniform(y_range[0], y_range[1])), 
-                "start_yaw:={}".format(random.uniform(0, 6.28)),
+                "start_x:={}".format(sx),
+                "start_y:={}".format(sy),
+                "start_yaw:={}".format(syaw),
                 "robot_ns:={}".format(ns)]
     launch_file = [(roslaunch.rlutil.resolve_launch_arguments(
         cli_args)[0], cli_args[1:])]

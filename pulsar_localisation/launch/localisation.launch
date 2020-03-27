@@ -6,6 +6,9 @@
         <param name="robot0" value="pulsar_"/>
         <!-- X ranges from 0 to <quantity> -->
         <param name="robot0_quantity" value="$(arg num_robots)"/>
+        <!-- Robots have odometry on the topic 'pulsar_X/<topic>' -->
+        <param name="robot0_odom_topic"
+               value="odometry/filtered"/>
         <!-- Robots have range sensors on the topic 'pulsar_X/<topic>' -->
         <param name="robot0_range_topic0" 
                value="left_range_finder/range"/>

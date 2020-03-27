@@ -25,7 +25,7 @@ include_directories(
 )
 
 add_library(pulsar_cloud_generator
-    src/pulsar_localisation/cloud_generator.cpp
+    src/pulsar_localisation/cloud_generator/cloud_generator.cpp
 )
 
 add_dependencies(pulsar_cloud_generator
@@ -34,6 +34,21 @@ add_dependencies(pulsar_cloud_generator
 )
 
 target_link_libraries(pulsar_cloud_generator
+    ${catkin_LIBRARIES}
+)
+
+add_library(pulsar_pose_estimators
+    src/pulsar_localisation/pose_estimators/swarm_pose_estimator.cpp
+    src/pulsar_localisation/pose_estimators/single_robot_pose_estimator.cpp
+)
+
+add_dependencies(pulsar_pose_estimators
+    ${pulsar_pose_estimators_EXPORTED_TARGETS}
+    ${catkin_EXPORTED_TARGETS}
+)
+
+target_link_libraries(pulsar_pose_estimators
+    pulsar_cloud_generator
     ${catkin_LIBRARIES}
 )
 
@@ -48,6 +63,7 @@ add_dependencies(pulsar_localisation_node
 
 target_link_libraries(pulsar_localisation_node
     pulsar_cloud_generator
+    pulsar_pose_estimators
     ${catkin_LIBRARIES}
 )
 
