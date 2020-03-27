@@ -6,7 +6,7 @@
 
 #include <ros/ros.h>
 #include <geometry_msgs/Pose.h>
-#include <geometry_msgs/PoseStamped.h>
+#include <geometry_msgs/PoseWithCovarianceStamped.h>
 
 #include "pose_estimators/single_robot_pose_estimator.hpp"
 #include "cloud_generator/cloud_generator.hpp"
@@ -57,7 +57,7 @@ public:
     /**
      * Get the pose estimates of each robot in the swarm.
      */
-    std::map<std::string, geometry_msgs::PoseStamped>& get_pose_estimates()
+    std::map<std::string, geometry_msgs::PoseWithCovarianceStamped>& get_pose_estimates()
     {
         return robot_pose_estimates_;
     }
@@ -65,13 +65,14 @@ public:
     /**
      * Get the pose estimate of the swarm.
      */
-    geometry_msgs::PoseStamped& get_pose_estimate() {
+    geometry_msgs::PoseWithCovarianceStamped& get_pose_estimate() {
         return swarm_pose_estimate_;
     };
 private:
-    geometry_msgs::PoseStamped swarm_pose_estimate_;
+    geometry_msgs::PoseWithCovarianceStamped swarm_pose_estimate_;
 
-    std::map<std::string, geometry_msgs::PoseStamped> robot_pose_estimates_;
+    std::map<std::string, geometry_msgs::PoseWithCovarianceStamped>
+        robot_pose_estimates_;
 
     std::map<std::string, std::shared_ptr<SingleRobotPoseEstimator>>
         robot_pose_estimators_;
