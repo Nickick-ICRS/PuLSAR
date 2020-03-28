@@ -3,7 +3,8 @@
 CloudGenerator::CloudGenerator(
     std::vector<std::string> range_topic_names, float history_length,
     std::string odom_name) 
-        :private_nh_("~"), odom_name_(odom_name), tf2_(tf_buffer_),
+        :private_nh_("~"), odom_name_(odom_name),
+        tf_buffer_(ros::Duration(history_length)), tf2_(tf_buffer_), 
         history_length_(history_length)
 {
     for(std::string name : range_topic_names) {

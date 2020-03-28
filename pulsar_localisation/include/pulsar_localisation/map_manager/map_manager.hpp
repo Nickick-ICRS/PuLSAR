@@ -120,4 +120,4 @@ private:
     std::shared_mutex map_mutex_;
 };
 
-#endif // __MAP_MANAGER_HPP__
+#endicomf // __MAP_MANAGER_HPP__
