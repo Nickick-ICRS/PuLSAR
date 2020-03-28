@@ -5,6 +5,7 @@
 
 #include "cloud_generator/cloud_generator.hpp"
 #include "pose_estimators/swarm_pose_estimator.hpp"
+#include "map_manager/map_manager.hpp"
 
 /**
  * @brief Localisation main class
@@ -51,6 +52,17 @@ private:
      */
     std::shared_ptr<SwarmPoseEstimator> pose_est_;
 
+    /**
+     * Class to handle the map of the environment.
+     */
+    std::shared_ptr<MapManager> map_man_;
+
+    /* ************** *
+     * ROS parameters *
+     * ************** */
+    // Topic that the map data is published on
+    std::string map_topic_;
+
     /* ********************** *
      * Robot group parameters *
      * ********************** */
@@ -70,8 +82,8 @@ private:
     /* ******************** *
      * Algorithm parameters *
      * ******************** */
-     // How long range data is kept for
-     float history_length_;
+    // How long range data is kept for
+    float history_length_;
 };
 
 int main(int argc, char **argv) {
@@ -110,6 +122,8 @@ LocalisationNode::LocalisationNode() :running_(true) {
 
     cloud_gen_.reset(new CloudGenerator(all_topics, history_length_));
 
+    map_man_.reset(new MapManager(map_topic_));
+
     pose_est_.reset(new SwarmPoseEstimator(
         cloud_gen_, "map", robot_names, initial_pose_estimates_, 
         robot_odom_map));
@@ -142,6 +156,14 @@ void LocalisationNode::loop() {
 }
 
 void LocalisationNode::get_ros_parameters() {
+    /* ************** *
+     * ROS parameters *
+     * ************** */
+    if(!ros::param::param<std::string>("~map_topic", map_topic_, "map")) {
+        ROS_WARN_STREAM(
+            "Failed to get param 'map_topic'. Defaulting to '" << map_topic_
+            << "'.");
+    }
     /* ********************** *
      * Robot group parameters *
      * ********************** */
@@ -269,9 +291,6 @@ void LocalisationNode::get_ros_parameters() {
                 initial_pose_estimates_[r].orientation.w = initial_pose[6];
             else
                 initial_pose_estimates_[r].orientation.w = 1;
-            ROS_INFO_STREAM(
-                "Got initial pose of :\n" << initial_pose_estimates_[r]
-                << " for " << r);
         }
         
         s1.clear();
@@ -283,9 +302,57 @@ void LocalisationNode::get_ros_parameters() {
     /* ******************** *
      * Algorithm parameters *
      * ******************** */
-     if(!ros::param::param<float>("~history_length", history_length_, 5)) {
-         ROS_WARN_STREAM(
-            "Failed to get param 'history_length'. Defaulting to: "
-            << history_length_ << ".");
-     }
+    if(!ros::param::param<float>("~history_length", history_length_, 5)) {
+        ROS_WARN_STREAM(
+           "Failed to get param 'history_length'. Defaulting to: "
+           << history_length_ << ".");
+    }
+
+    if(!ros::param::param<double>(
+        "~a1", SingleRobotPoseEstimator::a1_, 0.2))
+    {
+        ROS_WARN_STREAM(
+            "Failed to get param a1. Defaulting to '"
+            << SingleRobotPoseEstimator::a1_ << "'.");
+    }
+
+    if(!ros::param::param<double>(
+        "~a2", SingleRobotPoseEstimator::a2_, 0.2))
+    {
+        ROS_WARN_STREAM(
+            "Failed to get param a2. Defaulting to '"
+            << SingleRobotPoseEstimator::a2_ << "'.");
+    }
+
+    if(!ros::param::param<double>(
+        "~a3", SingleRobotPoseEstimator::a3_, 0.2))
+    {
+        ROS_WARN_STREAM(
+            "Failed to get param a3. Defaulting to '"
+            << SingleRobotPoseEstimator::a3_ << "'.");
+    }
+
+    if(!ros::param::param<double>(
+        "~a4", SingleRobotPoseEstimator::a4_, 0.2))
+    {
+        ROS_WARN_STREAM(
+            "Failed to get param a4. Defaulting to '"
+            << SingleRobotPoseEstimator::a4_ << "'.");
+    }
+
+    if(!ros::param::param<double>(
+        "~aslow", SingleRobotPoseEstimator::aslow_, 0.2))
+    {
+        ROS_WARN_STREAM(
+            "Failed to get param aslow. Defaulting to '"
+            << SingleRobotPoseEstimator::aslow_ << "'.");
+    }
+
+    if(!ros::param::param<double>(
+        "~afast", SingleRobotPoseEstimator::afast_, 0.2))
+    {
+        ROS_WARN_STREAM(
+            "Failed to get param afast. Defaulting to '"
+            << SingleRobotPoseEstimator::afast_ << "'.");
+    }
 }

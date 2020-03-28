@@ -1,5 +1,12 @@
 #include "pose_estimators/single_robot_pose_estimator.hpp"
 
+double SingleRobotPoseEstimator::a1_,
+       SingleRobotPoseEstimator::a2_,
+       SingleRobotPoseEstimator::a3_,
+       SingleRobotPoseEstimator::a4_,
+       SingleRobotPoseEstimator::aslow_, 
+       SingleRobotPoseEstimator::afast_;
+
 SingleRobotPoseEstimator::SingleRobotPoseEstimator(
     std::string name, const std::shared_ptr<CloudGenerator>& cloud_gen,
     std::string map_frame, geometry_msgs::Pose initial_pose,

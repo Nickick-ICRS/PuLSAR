@@ -1,5 +1,6 @@
 <launch>
     <arg name="num_robots" default="5"/>
+    <arg name="map_file" default="$(find pulsar_gazebo)/maps/map.yaml"/>
 
     <include file="$(find gazebo_ros)/launch/empty_world.launch">
         <arg name="world_name"
@@ -13,8 +14,11 @@
         <arg name="physics" value="bullet"/>
     </include>
 
+    <node name="map_server" pkg="map_server" type="map_server"
+          args="$(arg map_file)"/>
+
     <node name="spawn_pulsar_script" type="spawn_pulsar_robot.py"
-          pkg="pulsar_gazebo">
+          pkg="pulsar_gazebo" output="screen">
         <rosparam param="x_range">[-1, 1]</rosparam>
         <rosparam param="y_range">[-1, 1]</rosparam>
         <param name="num_robots" value="$(arg num_robots)"/>

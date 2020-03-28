@@ -2,6 +2,23 @@
     <arg name="num_robots" default="1"/>
     <node name="pulsar_localisation" pkg="pulsar_localisation"
           type="localisation_node" output="screen">
+        <!-- Map is on the topic '<topic>' -->
+        <param name="map_topic" value="map"/>
+
+        <!-- Robot noise parameters. See Probabilistic Robotics by Thrun
+             et al. -->
+        <param name="a1" value="0.2"/>
+        <param name="a2" value="0.2"/>
+        <param name="a3" value="0.2"/>
+        <param name="a4" value="0.2"/>
+        <!-- Exponential parameters for augmented MCL, 0 <= aslow < afast.
+             See Probabilistic Robotics by Thrun et al. -->
+        <param name="aslow" value="0.05"/>
+        <param name="afast" value="0.5"/>
+
+        <!-- Keep range data in the filter for up to <value> seconds -->
+        <param name="history_length" value="10"/>
+
         <!-- Robots are called pulsar_X -->
         <param name="robot0" value="pulsar_"/>
         <!-- X ranges from 0 to <quantity> -->
@@ -16,8 +33,5 @@
                value="middle_range_finder/range"/>
         <param name="robot0_range_topic2"
                value="right_range_finder/range"/>
-
-        <!-- Keep data in the filter for up to <value> seconds -->
-        <param name="history_length" value="10"/>
     </node>
 </launch>

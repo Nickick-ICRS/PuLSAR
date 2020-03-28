@@ -145,9 +145,13 @@ private:
     std::mt19937_64 gen_;
 
     // Robot noise parameters
-    double a1_, a2_, a3_, a4_;
+    static double a1_, a2_, a3_, a4_;
     // Exponential parameters for Augmented MCL, 0 <= aslow < afast
-    double aslow_, afast_;
+    static double aslow_, afast_;
+
+    // Saves us a lot of constructor parameters by having the above params
+    // be static and making this class able to access them.
+    friend class LocalisationNode;
 };
 
 #endif // __SINGLE_ROBOT_POSE_ESTIMATOR__

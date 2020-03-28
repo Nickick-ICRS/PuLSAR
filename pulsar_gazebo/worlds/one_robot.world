@@ -18,69 +18,124 @@
             <pose>0 0 0.2 0 0 0</pose>
             <static>true</static>
             <link name="xplus">
-                <pose>1 0 0 0 0 0</pose>
+                <pose>0.99 0 0 0 0 0</pose>
                 <visual name="visual">
                     <geometry>
                         <box>
-                            <size>0.01 2 0.4</size>
+                            <size>0.02 2 0.4</size>
                         </box>
                     </geometry>
                 </visual>
                 <collision name="collision">
                     <geometry>
                         <box>
-                            <size>0.01 2 0.4</size>
+                            <size>0.02 2 0.4</size>
                         </box>
                     </geometry>
                 </collision>
             </link>
             <link name="yplus">
-                <pose>0 1 0 0 0 0</pose>
+                <pose>0 0.99 0 0 0 0</pose>
                 <visual name="visual">
                     <geometry>
                         <box>
-                            <size>2 0.01 0.4</size>
+                            <size>2 0.02 0.4</size>
                         </box>
                     </geometry>
                 </visual>
                 <collision name="collision">
                     <geometry>
                         <box>
-                            <size>2 0.01 0.4</size>
+                            <size>2 0.02 0.4</size>
                         </box>
                     </geometry>
                 </collision>
             </link>
             <link name="xminus">
-                <pose>-1 0 0 0 0 0</pose>
+                <pose>-0.99 0 0 0 0 0</pose>
                 <visual name="visual">
                     <geometry>
                         <box>
-                            <size>0.01 2 0.4</size>
+                            <size>0.02 2 0.4</size>
                         </box>
                     </geometry>
                 </visual>
                 <collision name="collision">
                     <geometry>
                         <box>
-                            <size>0.01 2 0.4</size>
+                            <size>0.02 2 0.4</size>
                         </box>
                     </geometry>
                 </collision>
             </link>
             <link name="yminus">
-                <pose>0 -1 0 0 0 0</pose>
+                <pose>0 -0.99 0 0 0 0</pose>
                 <visual name="visual">
                     <geometry>
                         <box>
-                            <size>2 0.01 0.4</size>
+                            <size>2 0.02 0.4</size>
                         </box>
                     </geometry>
                 </visual>
                 <collision name="collision">
                     <geometry>
                         <box>
-                            <size>2 0.01 0.4</size>
+                            <size>2 0.02 0.4</size>
+                        </box>
+                    </geometry>
+                </collision>
+            </link>
+        </model>
+        <model name="inner walls">
+            <pose>0 0 0.2 0 0 0</pose>
+            <static>true</static>
+            <link name="bot_left">
+                <pose>-0.48 0.56 0 0 0 0</pose>
+                <visual name="visual">
+                    <geometry>
+                        <box>
+                            <size>0.56 0.08 0.4</size>
+                        </box>
+                    </geometry>
+                </visual>
+                <collision name="collision">
+                    <geometry>
+                        <box>
+                            <size>0.56 0.08 0.4</size>
+                        </box>
+                    </geometry>
+                </collision>
+            </link>
+            <link name="top_left">
+                <pose>0.72 0.36 0 0 0 0</pose>
+                <visual name="visual">
+                    <geometry>
+                        <box>
+                            <size>0.08 0.32 0.4</size>
+                        </box>
+                    </geometry>
+                </visual>
+                <collision name="collision">
+                    <geometry>
+                        <box>
+                            <size>0.08 0.32 0.4</size>
+                        </box>
+                    </geometry>
+                </collision>
+            </link>
+            <link name="bot_right">
+                <pose>-0.46 -0.46 0 0 0 0</pose>
+                <visual name="visual">
+                    <geometry>
+                        <box>
+                            <size>0.2 0.2 0.4</size>
+                        </box>
+                    </geometry>
+                </visual>
+                <collision name="collision">
+                    <geometry>
+                        <box>
+                            <size>0.2 0.2 0.4</size>
                         </box>
                     </geometry>
                 </collision>

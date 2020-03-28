@@ -1,0 +1,9 @@
+image: map.png
+# 1 pixel is 4 mm
+resolution: 0.004
+# lower left pixel is at [x, y, yaw]
+origin: [-1.0, 1.0, -1.57]
+occupied_thresh: 0.65
+free_thresh: 0.4
+# white is free, black is occupied
+negate: 0

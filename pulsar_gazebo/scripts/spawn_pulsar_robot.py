@@ -8,12 +8,96 @@ import rospkg
 import rospy
 
 from std_srvs.srv import Empty
+from nav_msgs.msg import OccupancyGrid
+
+
+def is_pose_valid(x, y):
+    global map_grid
+    global map_grid_data
+    global robot_radius
+    
+    th = 2*math.acos(map_grid.info.origin.orientation.w)
+    dx = x - map_grid.info.origin.position.x
+    dy = y - map_grid.info.origin.position.y
+
+    row = int((math.cos(th)*dx-math.sin(th)*dy) / map_grid.info.resolution + 0.5)
+    col = int((math.sin(th)*dx+math.cos(th)*dy) / map_grid.info.resolution + 0.5)
+
+    if row < 0:
+        return False
+    if col < 0:
+        return False
+    if row >= map_grid.info.height:
+        return False
+    if col >= map_grid.info.width:
+        return False
+
+    # Check the area around the pose
+    for r in range(int(2*robot_radius / map_grid.info.resolution)+1):
+        r2 = int(r - robot_radius / map_grid.info.resolution)
+        if row + r2 < 0:
+            continue
+        if row + r2 >= map_grid.info.height:
+            continue
+        for c in range(int(2*robot_radius / map_grid.info.resolution)+1):
+            c2 = int(c - robot_radius / map_grid.info.resolution)
+            if col + c2 < 0:
+                continue
+            if col + c2 >= map_grid.info.width:
+                continue
+            dr = float(r2) * map_grid.info.resolution
+            dc = float(c2) * map_grid.info.resolution
+            if math.sqrt(dr * dr + dc * dc) < robot_radius:
+                if map_grid_data[
+                        (col+c2)*map_grid.info.height + (row+r2)] != 0:
+                    return False
+    return True
+
+
+def update_map_with_robot(x, y):
+    global map_grid
+    global map_grid_data
+    global robot_radius
+
+    if not is_pose_valid(x, y):
+        raise RuntimeError("Check for pose validity before calling this!")
+    
+    th = 2*math.acos(map_grid.info.origin.orientation.w)
+    dx = x - map_grid.info.origin.position.x
+    dy = y - map_grid.info.origin.position.y
+
+    row = int((math.cos(th)*dx-math.sin(th)*dy) / map_grid.info.resolution + 0.5)
+    col = int((math.sin(th)*dx+math.cos(th)*dy) / map_grid.info.resolution + 0.5)
+
+    # Set the area around the pose as occupied
+    for r in range(int(2*robot_radius / map_grid.info.resolution)+1):
+        r2 = int(r - robot_radius / map_grid.info.resolution)
+        if row + r2 < 0:
+            continue
+        if row + r2 >= map_grid.info.height:
+            continue
+        for c in range(int(2*robot_radius / map_grid.info.resolution)+1):
+            c2 = int(c - robot_radius / map_grid.info.resolution)
+            if col + c2 < 0:
+                continue
+            if col + c2 >= map_grid.info.width:
+                continue
+            dr = float(r2) * map_grid.info.resolution
+            dc = float(c2) * map_grid.info.resolution
+            if math.sqrt(dr * dr + dc * dc) < robot_radius:
+                map_grid_data[
+                    (col+c2)*map_grid.info.height + (row+r2)] = 100
 
 
 def spawn_robot(uuid, launch_file_path, x_range, y_range, ns):
-    sx = random.uniform(x_range[0], x_range[1]) 
-    sy = random.uniform(y_range[0], y_range[1]) 
-    syaw = random.uniform(0, 6.28)
+    while not rospy.is_shutdown():
+        sx = random.uniform(x_range[0], x_range[1]) 
+        sy = random.uniform(y_range[0], y_range[1]) 
+        syaw = random.uniform(0, 6.28)
+        if is_pose_valid(sx, sy):
+            break
+
+    update_map_with_robot(sx, sy)
 
     rospy.set_param(
         "/"+ns+"/initial_pose", 
@@ -73,11 +157,28 @@ def get_params():
         rospy.logwarn(
             "Failed to get param 'robot_prefix', defaulting to {}".format(
                 robot_prefix))
+
+    try:
+        robot_radius = rospy.get_param("~robot_radius")
+    except KeyError:
+        robot_radius = 0.05
+        rospy.logwarn(
+            "Failed to get param 'robot_radius', defaulting to {}".format(
+                robot_radius))
         
-    return x_range, y_range, num_robots, robot_prefix
+    return x_range, y_range, num_robots, robot_prefix, robot_radius
+
+
+def map_cb(msg):
+    global map_grid
+    global map_grid_data
+    map_grid = msg
+    map_grid_data = list(map_grid.data)
 
 
 def main():
+    global map_grid
+    global robot_radius
     random.seed(None)
     rospy.init_node("spawn_pulsar_script")
 
@@ -86,7 +187,10 @@ def main():
     pause_gazebo = rospy.ServiceProxy("/gazebo/pause_physics", Empty)
     unpause_gazebo = rospy.ServiceProxy("/gazebo/unpause_physics", Empty)
 
-    x_range, y_range, num_robots, robot_prefix = get_params()
+    map_grid = None
+    rospy.Subscriber("/map", OccupancyGrid, map_cb)
+
+    x_range, y_range, num_robots, robot_prefix, robot_radius = get_params()
 
     rospack = rospkg.RosPack()
     launch_file_path = os.path.join(
@@ -94,6 +198,10 @@ def main():
 
     uuid = roslaunch.rlutil.get_or_generate_uuid(None, False)
     roslaunch.configure_logging(uuid)
+
+    # Wait for the map to exist
+    while(map_grid == None):
+        rospy.logwarn_throttle(5, "Waiting for /map to become available.")
 
     pause_gazebo()
 
