@@ -139,6 +139,7 @@ void CloudGenerator::range_cb(const sensor_msgs::RangeConstPtr& msg) {
         point.header.stamp.sec + point.header.stamp.nsec / 1e9;
     std::lock_guard<std::recursive_mutex> lock(robot_cloud_muts_[prefix]);
     robot_clouds_[prefix].push_back(pcl_point);
+    robot_raw_data_[prefix].push_back(*msg);
 
     // TODO: Add the point to the full cloud
 }

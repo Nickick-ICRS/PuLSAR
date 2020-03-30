@@ -79,6 +79,38 @@ public:
     void set_robot_pose(
         std::string robot_name, const geometry_msgs::Pose& pose,
         float robot_radius);
+
+    /**
+     * Cone cast from a frame without considering other robots.
+     *
+     * @param p Point from which to cone cast from, in the map frame.
+     *
+     * @param ang Angle of the cone. 0 is positive x, following REP 103.
+     *
+     * @param spread The cone angle.
+     *
+     * @return The distance from the frame to the first obstacle.
+     */
+    double cone_cast_plain_map(
+        const geometry_msgs::Point& p, double ang, double spread);
+
+    /**
+     * Cone cast from a frame with consideration to other robots.
+     *
+     * @param p Point from which to cone cast from, in the map frame.
+     *
+     * @param ang Angle of the cone. 0 is positive x, following REP 103.
+     *
+     * @param spread The cone angle.
+     *
+     * @param robot_name Name of the robot which is measuring. This will be
+     *                   ignored when considering cone collisions.
+     *
+     * @return The distance from the frame to the first obstacle.
+     */
+    double cone_cast_with_bots(
+        const geometry_msgs::Point& p, double ang, double spread,
+        std::string robot_name);
 private:
     /**
      * Callback to receive the map stored on the map server.
@@ -86,6 +118,49 @@ private:
      * @param msg The message containing the map.
      */
     void map_cb(const nav_msgs::OccupancyGridConstPtr& msg);
+
+    /**
+     * Get the tiles which form the ray defined by a point and angle.
+     *
+     * @param p The point from which to start the ray.
+     *
+     * @param ang The angle of the ray.
+     *
+     * @return A vector of tiles which contact the ray.
+     */
+    std::vector<unsigned int> ray_cast(
+        const geometry_msgs::Point& p, double ang);
+
+    /**
+     * Perform a cone casting operation.
+     *
+     * @param p The point from which to start the cast.
+     *
+     * @param ang The angle at which direction to cast in.
+     *
+     * @param spread The coning angle.
+     *
+     * @param map The map.
+     *
+     * @return The distance to the first occupied grid tile found by the
+     * cone cast (m).
+     */
+    double cone_cast(
+        const geometry_msgs::Point& p, double ang, double spread_ang, 
+        const int8_t *map);
+
+    /**
+     * Gets the tiles occupied by a point and radius on the map.
+     *
+     * @param p The point to search around.
+     *
+     * @param radius The radius around which we care.
+     *
+     * @return List of the location of the tiles used by the robot within
+     *         the map. E.g. {50, 51} would be map_[50] and map_[51].
+     */
+    std::vector<unsigned int> get_tiles(
+        const geometry_msgs::Point& p, float radius);
 
     /**
      * @brief Update the map with robot poses.
@@ -120,4 +195,4 @@ private:
     std::shared_mutex map_mutex_;
 };
 
-#endicomf // __MAP_MANAGER_HPP__
+#endif // __MAP_MANAGER_HPP__

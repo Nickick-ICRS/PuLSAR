@@ -6,6 +6,7 @@
 #include "cloud_generator/cloud_generator.hpp"
 #include "pose_estimators/swarm_pose_estimator.hpp"
 #include "map_manager/map_manager.hpp"
+#include "sensor_models/range_cloud_sensor_model.hpp"
 
 /**
  * @brief Localisation main class
@@ -354,5 +355,61 @@ void LocalisationNode::get_ros_parameters() {
         ROS_WARN_STREAM(
             "Failed to get param afast. Defaulting to '"
             << SingleRobotPoseEstimator::afast_ << "'.");
+    }
+
+    if(!ros::param::param<double>(
+        "~lamshort", RangeCloudSensorModel::lamshort_, 0.2))
+    {
+        ROS_WARN_STREAM(
+            "Failed to get param lamshort. Defaulting to '"
+            << RangeCloudSensorModel::lamshort_ << "'.");
+    }
+
+    if(!ros::param::param<double>(
+        "~sigma2", RangeCloudSensorModel::sigma2_, 0.2))
+    {
+        ROS_WARN_STREAM(
+            "Failed to get param sigma2. Defaulting to '"
+            << RangeCloudSensorModel::sigma2_ << "'.");
+    }
+
+    if(!ros::param::param<double>(
+        "~ztime", RangeCloudSensorModel::ztime_, 0.2))
+    {
+        ROS_WARN_STREAM(
+            "Failed to get param ztime. Defaulting to '"
+            << RangeCloudSensorModel::ztime_ << "'.");
+    }
+
+    if(!ros::param::param<double>(
+        "~zhit", RangeCloudSensorModel::zhit_, 0.2))
+    {
+        ROS_WARN_STREAM(
+            "Failed to get param zhit. Defaulting to '"
+            << RangeCloudSensorModel::zhit_ << "'.");
+    }
+
+    if(!ros::param::param<double>(
+        "~zshort", RangeCloudSensorModel::zshort_, 0.2))
+    {
+        ROS_WARN_STREAM(
+            "Failed to get param zshort. Defaulting to '"
+            << RangeCloudSensorModel::zshort_ << "'.");
+    }
+
+    if(!ros::param::param<double>(
+        "~zmax", RangeCloudSensorModel::zmax_, 0.2))
+    {
+        ROS_WARN_STREAM(
+            "Failed to get param zmax. Defaulting to '"
+            << RangeCloudSensorModel::zmax_ << "'.");
+    }
+
+    if(!ros::param::param<double>(
+        "~zrand", RangeCloudSensorModel::zrand_, 0.2))
+    {
+        ROS_WARN_STREAM(
+            "Failed to get param zrand. Defaulting to '"
+            << RangeCloudSensorModel::zrand_ << "'.");
     }
 }

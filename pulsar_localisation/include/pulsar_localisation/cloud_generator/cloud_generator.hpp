@@ -129,6 +129,7 @@ private:
      */
     pcl::PointCloud<pcl::PointXYZI> full_cloud_;
     std::map<std::string, pcl::PointCloud<pcl::PointXYZI>> robot_clouds_;
+    std::map<std::string, std::vector<sensor_msgs::Range>> robot_raw_data_;
     // Mutexes for thread safety
     std::mutex full_cloud_mut_;
     /**

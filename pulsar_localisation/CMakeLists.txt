@@ -50,6 +50,21 @@ target_link_libraries(pulsar_map_manager
     ${catkin_libraries}
 )
 
+add_library(pulsar_sensor_models
+    src/pulsar_localisation/sensor_models/range_cloud_sensor_model.cpp
+)
+
+add_dependencies(pulsar_sensor_models
+    ${pulsar_sensor_models_EXPORTED_TARGETS}
+    ${catkin_EXPORTED_TARGETS}
+)
+
+target_link_libraries(pulsar_sensor_models
+    pulsar_cloud_generator
+    pulsar_map_manager
+    ${catkin_libraries}
+)
+
 add_library(pulsar_pose_estimators
     src/pulsar_localisation/pose_estimators/swarm_pose_estimator.cpp
     src/pulsar_localisation/pose_estimators/single_robot_pose_estimator.cpp
@@ -63,6 +78,7 @@ add_dependencies(pulsar_pose_estimators
 target_link_libraries(pulsar_pose_estimators
     pulsar_cloud_generator
     pulsar_map_manager
+    pulsar_sensor_models
     ${catkin_LIBRARIES}
 )
 
@@ -79,6 +95,7 @@ target_link_libraries(pulsar_localisation_node
     pulsar_cloud_generator
     pulsar_map_manager
     pulsar_pose_estimators
+    pulsar_sensor_models
     ${catkin_LIBRARIES}
 )
 

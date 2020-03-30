@@ -1,9 +1,17 @@
 #include "sensor_models/range_cloud_sensor_model.hpp"
 
+double RangeCloudSensorModel::lamshort_;
+double RangeCloudSensorModel::sigma2_;
+double RangeCloudSensorModel::ztime_;
+double RangeCloudSensorModel::zhit_;
+double RangeCloudSensorModel::zshort_;
+double RangeCloudSensorModel::zmax_;
+double RangeCloudSensorModel::zrand_;
+
 RangeCloudSensorModel::RangeCloudSensorModel(
     std::shared_ptr<MapManager> map_man, float history_length,
     float time_resolution, std::string map_frame)
-        :tf_buffer(ros::Duration(history_length)), tf2_(tf_buffer_),
+        :tf_buffer_(ros::Duration(history_length)), tf2_(tf_buffer_),
         history_length_(history_length), time_resolution_(time_resolution),
         map_man_(map_man), map_frame_(map_frame)
 {
@@ -46,80 +54,104 @@ void RangeCloudSensorModel::add_pose_estimate(
     // If the difference is negative then place the new measurement before
     // the closest element
     else if(best_diff < 0)
-        pose_estimates_.insert(pose_estimates_.begin() + best_i);
+        pose_estimates_.insert(pose_estimates_.begin() + best_i, p);
     // Otherwise place the new measurement after the closest element
     else {
-        if(best_i + 1 >= pose_estimates.size())
+        if(best_i + 1 >= pose_estimates_.size())
             pose_estimates_.push_back(p);
         else
-            pose_estimates_.insert(pose_estimates.begin() + best_i + 1, p);
+            pose_estimates_.insert(pose_estimates_.begin() + best_i + 1, p);
     }
 }
 
 float RangeCloudSensorModel::model(
     const geometry_msgs::Pose& p, 
-    const pcl::PointCloud<pcl::PointXYZI>& c, std::string frame)
+    const std::vector<sensor_msgs::Range>& c,
+    std::string robot_name, std::string base_link_frame)
 {
     float q = 1;
     ros::Time now = ros::Time::now();
-    for(const auto& p : c) {
+    for(const auto& z : c) {
         // Transform the point into the estimated pose coordinate frame, for
         // the closest pose in the history
-        ros::Time ptime(p.intensity);
         geometry_msgs::PointStamped pt;
-        pt.header.frame_id = frame;
-        pt.header.stamp = ptime;
-        pt.point.x = p.x;
-        pt.point.y = p.y;
-        pt.point.z = p.z;
+        pt.header.frame_id = z.header.frame_id;
+        pt.header.stamp = z.header.stamp;
+        pt.point.x = z.range;
 
         // Flag to say whether this point is relative to the new pose
         // estimate, or an older one in the past
         bool in_past = true;
         
         try {
-            tf_buffer_.transform(pt, pt, map_frame);
+            tf_buffer_.transform(pt, pt, map_frame_);
         }
-        catch(tf2::ExtrapolationException, tf2::LookupException) {
+        catch(const tf2::TransformException* ex) {
+            if(!dynamic_cast<const tf2::ExtrapolationException*>(ex) &&
+               !dynamic_cast<const tf2::LookupException*>(ex))
+            {
+                ROS_WARN_STREAM(ex->what());
+                continue;
+            }
             // If the transform doesn't exist yet, or requires extrapolation
             // into the future then we transform the point with the most
             // recent pose (i.e. the given one)
+
+            // First try to transform into the base_link frame though
+            try {
+                tf_buffer_.transform(pt, pt, base_link_frame);
+            }
+            catch(const tf2::TransformException& ex) {
+                ROS_WARN_STREAM(ex.what());
+                continue;
+            }
+
             pt.point.x += p.position.x;
             pt.point.y += p.position.y;
             pt.point.z += p.position.z;
             double th = 2*acos(p.orientation.w);
             pt.point.x = pt.point.x * cos(th) - pt.point.y * sin(th);
             pt.point.y = pt.point.x * sin(th) + pt.point.y * cos(th);
-            pt.header.frame_id = map_frame;
-             in_past = false;
-        }
-        catch(tf2::TransformException& ex) {
-            ROS_WARN(ex.what());
-            continue;
+            pt.header.frame_id = map_frame_;
+            in_past = false;
         }
 
         // Compute the ideal measurement via raycasting
         // If the point is old then we can't include the positions of other
         // robots, so use the simplified map
+        double ideal_z;
+        double ang;
+        try {
+            const auto trans = tf_buffer_.lookupTransform(
+                base_link_frame, z.header.frame_id, ros::Time(0));
+            ang = 2*acos(trans.transform.rotation.w) 
+                + 2*acos(p.orientation.w);
+        }
+        catch(tf2::TransformException& ex) {
+            ROS_WARN_STREAM(ex.what());
+            continue;
+        }
         if(in_past) {
-            // TODO
+            ideal_z = map_man_->cone_cast_plain_map(
+                pt.point, ang, z.field_of_view);
         }
         // Otherwise we can consider positions of other robots within
         // the swarm
         else {
-            // TODO
+            ideal_z = map_man_->cone_cast_with_bots(
+                pt.point, ang, z.field_of_view, robot_name);
         }
         // Now process how likely the point is based on how far it is from
         // an occupied area on the map
-        float prob = zhit_*phit(pt | p, map) + zshort_*pshort(pt | p, map)
-                   + zmax_*pmax(pt | p, map) + zrand_*prand(pt | p, map);
+        float prob = zhit_*phit(z, ideal_z) + zshort_*pshort(z, ideal_z)
+                   + zmax_*pmax(z) + zrand_*prand(z);
 
         // Older points are less reliable, so increase the probability of
-        // them being 'correct' such that they have less of an effect
-        // on the overall probability
-        auto dur = now - ptime;
-        frac = (dur.sec + dur.nsec / 1e9) / history_length;
-        prob = ztime_ * frac + (1-ztime) * prob;
+        // them being 'correct' such that they have less of a negative
+        // effect on the overall probability
+        auto dur = now - z.header.stamp;
+        double frac = (dur.sec + dur.nsec / 1e9) / history_length_;
+        prob = ztime_ * frac + (1-ztime_) * prob;
 
         // Update the total probability
         q *= prob;
@@ -127,9 +159,10 @@ float RangeCloudSensorModel::model(
     return 1.0;
 }
 
-float RangeCloudSensorModel::phit(const geometry_msgs::PointStamped& z) {
-    double dist = sqrt(z.point.x*z.point.x + z.point.y * z.point.y);
-    if(dist > range_max_ || dist < 0) return 0;
+float RangeCloudSensorModel::phit(
+    const sensor_msgs::Range& z, double ideal_z)
+{
+    if(z.range > z.max_range || z.range < z.min_range) return 0;
     // Helper lambda
     static auto N = [this](double z, double ideal_z, double sigma2) {
         double a = 1/sqrt(2*M_PI*sigma2);
@@ -138,40 +171,41 @@ float RangeCloudSensorModel::phit(const geometry_msgs::PointStamped& z) {
     };
     
     // Simpson's rule in a helper lambda
-    static auto integral = [this, &N](
-        double z, double ideal_z, double sigma2)
+    static auto integral = [this](
+        const sensor_msgs::Range& z, double ideal_z, double sigma2)
     {
         const int NUM_DIVISIONS = 2*10;
-        double delta = max_range_ / (double)NUM_DIVISIONS;
+        double delta = z.max_range / (double)NUM_DIVISIONS;
         double area = 0;
-        for(double zi = 0; zi < max_range_; zi += 2 * delta) {
-            area += N(zi) + 4 * N(zi+delta) + N(zi+2*delta);
+        for(double zi = 0; zi < z.max_range; zi += 2 * delta) {
+            area += N(zi, ideal_z, sigma2)
+                 + 4 * N(zi+delta, ideal_z, sigma2)
+                 + N(zi+2*delta, ideal_z, sigma2);
         }
         area *= delta/3;
         return area;
     };
 
-    static double eta = 1/integral(dist, ideal_dist, sigma2_);
-    return eta * N(z, ideal_z, sigma2_);
+    static double eta = 1/integral(z, ideal_z, sigma2_);
+    return eta * N(z.range, ideal_z, sigma2_);
 }
 
-float RangeCloudSensorModel::pshort(const geometry_msgs::PointStamped& z) {
-    double dist = sqrt(z.point.x*z.point.x + z.point.y * z.point.y);
-    if(0 <= dist and dist <= ideal_dist) {
-        double eta - 1/(1-exp(-lamshort_*ideal_dist));
-        return eta * lamshort_ * exp(-lamshort_*dist);
+float RangeCloudSensorModel::pshort(
+    const sensor_msgs::Range& z, double ideal_z)
+{
+    if(z.min_range <= z.range && z.range <= ideal_z) {
+        double eta = 1/(1-exp(-lamshort_*ideal_z));
+        return eta * lamshort_ * exp(-lamshort_*z.range);
     }
     return 0;
 }
 
-float RangeCloudSensorModel::pmax(const geometry_msgs::PointStamped& z) {
-    double dist = sqrt(z.point.x*z.point.x + z.point.y * z.point.y);
-    if(dist >= range_max_) return 1;
+float RangeCloudSensorModel::pmax(const sensor_msgs::Range& z) {
+    if(z.range >= z.max_range) return 1;
     return 0;
 }
 
-float RangeCloudSensorModel::prand(const geometry_msgs::PointStamped& z) {
-    double dist = sqrt(z.point.x*z.point.x + z.point.y * z.point.y);
-    if(dist < 0 || dist >= range_max_) return 0;
-    return 1 / range_max_;
+float RangeCloudSensorModel::prand(const sensor_msgs::Range& z) {
+    if(z.range < z.min_range || z.range >= z.max_range) return 0;
+    return 1 / (z.max_range - z.min_range);
 }

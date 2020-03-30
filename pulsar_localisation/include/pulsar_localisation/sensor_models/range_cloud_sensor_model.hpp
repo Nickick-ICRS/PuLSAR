@@ -5,9 +5,7 @@
 
 #include <geometry_msgs/Pose.h>
 #include <geometry_msgs/PoseWithCovarianceStamped.h>
-
-#include <pcl/point_cloud.h>
-#include <pcl/point_type.h>
+#include <sensor_msgs/Range.h>
 
 #include <tf2_ros/transform_listener.h>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
@@ -52,46 +50,50 @@ public:
      * @param p The pose being weighed. This should be relative to the map
      *          frame.
      *
-     * @param c The measurement data in point cloud form. This should be
-     *          stored with respect to the base_link frame of the robot.
-     *          The intensity (I) of the data should be the time at which it
-     *          was acquired (in seconds).
+     * @param c The cloud of raw measurement data.
      *
-     * @param frame The coordinate frame of the point cloud data.
+     * @param robot_name The name (tf_prefix) of the robot.
+     *
+     * @param base_link_frame The frame name of the robot's base_link.
      *
      * @return A probability of the pose being correct.
      */
     float model(
         const geometry_msgs::Pose& p, 
-        const pcl::PointCloud<pcl::PointXYZI>& c, std::string frame);
+        const std::vector<sensor_msgs::Range>& c, std::string robot_name, 
+        std::string base_link_frame);
 private:
     /**
-     * Calculates the probability that a measurement was correct.
+     * Calculates the probability that a measurement was correct. See
+     * Probabilistic Robotics by Thrun et al.
      *
      * @param z The measurement.
      */
-    float phit(const geometry_msgs::PointStamped& z);
+    float phit(const sensor_msgs::Range& z, double ideal_z);
 
     /**
-     * Calculates the probability that a measurement fell short.
+     * Calculates the probability that a measurement fell short. See
+     * Probabilistic Robotics by Thrun et al.
      *
      * @param z The measurement.
      */
-    float pshort(const geometry_msgs::PointStamped& z);
+    float pshort(const sensor_msgs::Range& z, double ideal_z);
 
     /**
-     * Calculates the probability that a measurement was max range.
+     * Calculates the probability that a measurement was max range. See
+     * Probabilistic Robotics by Thrun et al.
      *
      * @param z The measurement.
      */
-    float pmax(const geometry_msgs::PointStamped& z);
+    float pmax(const sensor_msgs::Range& z);
 
     /**
-     * Calculates the probability that a measurement was random noise.
+     * Calculates the probability that a measurement was random noise. See
+     * Probabilistic Robotics by Thrun et al.
      *
      * @param z The measurement.
      */
-    float prand(const geometry_msgs::PointStamped& z);
+    float prand(const sensor_msgs::Range& z);
 
     // Map
     std::shared_ptr<MapManager> map_man_;
@@ -104,6 +106,16 @@ private:
     float history_length_;
     float time_resolution_;
     std::string map_frame_;
+
+    static double lamshort_;
+    static double sigma2_;
+    static double ztime_;
+    static double zhit_;
+    static double zshort_;
+    static double zmax_;
+    static double zrand_;
+
+    friend class LocalisationNode;
 };
 
 #endif // __RANGE_CLOUD_SENSOR_MODEL_HPP__
