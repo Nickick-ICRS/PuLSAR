@@ -137,22 +137,38 @@ LocalisationNode::~LocalisationNode() {
     main_thread_.join();
 }
 
+#include <sensor_msgs/PointCloud.h>
 void LocalisationNode::loop() {
     ros::Rate sleeper(100);
+
+    ros::NodeHandle nh("~");
+    ros::Publisher pub = nh.advertise<sensor_msgs::PointCloud>("test", 1);
+    geometry_msgs::Point p;
+    sensor_msgs::PointCloud c;
+    c.header.frame_id = "map";
+    std::random_device r;
+    std::default_random_engine el(r());
+    std::uniform_real_distribution<double> dist(-1, 1);
     while(running_) {
         cloud_gen_->clean_all_clouds();
         sleeper.sleep();
 
         cloud_gen_->publish_cloud("pulsar_0");
-        cloud_gen_->publish_cloud("pulsar_1");
-        cloud_gen_->publish_cloud("pulsar_2");
-        cloud_gen_->publish_cloud("pulsar_3");
-        cloud_gen_->publish_cloud("pulsar_4");
-        cloud_gen_->publish_cloud("pulsar_5");
-        cloud_gen_->publish_cloud("pulsar_6");
-        cloud_gen_->publish_cloud("pulsar_7");
-        cloud_gen_->publish_cloud("pulsar_8");
-        cloud_gen_->publish_cloud("pulsar_9");
+        
+        c.points.clear();
+        for(unsigned int i = 0; i < 100; i++) {
+            p.x = 0;//dist(el);
+            p.y = 0;//dist(el);
+            double ang = M_PI * dist(el);
+            double dist = map_man_->cone_cast_plain_map(
+                p, ang, 0.1);
+            geometry_msgs::Point32 pt;
+            pt.x = dist*cos(ang) + p.x;
+            pt.y = dist*sin(ang) + p.y;
+            c.points.push_back(pt);
+        }
+        c.header.stamp = ros::Time::now();
+        pub.publish(c);
     }
 }
 

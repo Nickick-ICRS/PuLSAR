@@ -1,18 +1,25 @@
 #include "map_manager/map_manager.hpp"
 
-#include <chrono> // For std::chrono::seconds
+#include <chrono> // For std::chrono::milliseconds
 #include <mutex> // For std::unique_lock
 
-MapManager::MapManager(std::string map_topic) {
+MapManager::MapManager(std::string map_topic) :map_with_robots_(nullptr) {
     map_sub_ = nh_.subscribe(map_topic, 1, &MapManager::map_cb, this);
 
     // Block until the map comes online
-    while(not map_) {
-        std::this_thread::sleep_for(std::chrono::seconds(1));
+    bool waiting_for_map = true;
+    ROS_ERROR("1");
+    while(waiting_for_map) {
+        ros::spinOnce();
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
         ROS_WARN_STREAM_DELAYED_THROTTLE(
             5, "No map received from '" << map_topic 
             << "' yet. Will continue waiting...");
+        std::shared_lock<std::shared_mutex> lock(map_mutex_);
+        if(map_)
+            waiting_for_map = false;
     }
+    ROS_ERROR("2");
 }
 
 MapManager::~MapManager() {
@@ -22,7 +29,7 @@ MapManager::~MapManager() {
     }
 }
 
-void MapManager::map_cb(const nav_msgs::OccupancyGridConstPtr& msg) {
+void MapManager::map_cb(const nav_msgs::OccupancyGridPtr& msg) {
     // This lock lets us have multiple reads *or* one write at a time
     std::unique_lock<std::shared_mutex> lock(map_mutex_);
     map_ = msg;
@@ -245,13 +252,144 @@ double MapManager::cone_cast(
 {
     std::shared_lock<std::shared_mutex> lock(map_mutex_);
 
-    const auto& ray1 = ray_cast(p, ang + spread/2);
-    const auto& ray2 = ray_cast(p, ang - spread/2);
+    double r1ang = ang - spread/2;
+    double r2ang = ang + spread/2;
+    while(r1ang > M_PI) r1ang -= 2*M_PI;
+    while(r1ang < -M_PI) r1ang += 2*M_PI;
+    while(r2ang > M_PI) r2ang -= 2*M_PI;
+    while(r2ang < -M_PI) r2ang += 2*M_PI;
 
-    // TODO: Calculate the cone cast
+    auto ray1 = ray_cast(p, r1ang);
+    auto ray2 = ray_cast(p, r2ang);
+    // Loop through tiles from the first ray to the second ray, starting 
+    // at the origin
+    // Both top left or bottom left - ray1 will always be higher
+    if(M_PI >= r1ang && r2ang >= 0) {
+        auto it1 = ray1.begin();
+        auto it2 = ray2.begin();
+        double dist = 1e10;
+        unsigned int max_y = map_->info.height;
+        for(unsigned int x = it1->first; x != -1; x--) {
+            while(it1->first >= x && it1 != ray1.end()) it1++;
+            while(it2->first >= x && it2 != ray2.end()) it2++;
+            it1--;
+            it2--;
+            unsigned int y = it1->second;
+            if(y > max_y) y = max_y;
+            if(y < it2->second) return dist;
+
+            for(y; y != it2->second-1; y--) {
+                if(map[map_->info.width*y + x]) {
+                    // We've hit an object, if it's closer then store
+                    // max y and distance
+                    double new_dist = sqrt(pow(y-p.y, 2) + pow(x-p.x, 2));
+                    new_dist *= map_->info.resolution;
+                    if(new_dist < dist) {
+                        dist = new_dist;
+                        max_y = y;
+                    }
+                }
+            }
+        }
+        // In case we didn't return in the loop
+        return dist;
+    }
+    // Both on right - ray2 will always be higher
+    else if(0 >= r2ang && r1ang >= -M_PI) {
+        auto it1 = ray1.begin();
+        auto it2 = ray2.begin();
+        double dist = 1e10;
+        unsigned int max_y = map_->info.height;
+        for(unsigned int x = it1->first; x != map_->info.width; x++) {
+            while(it1->first <= x && it1 != ray1.end()) it1++;
+            while(it2->first <= x && it2 != ray2.end()) it2++;
+            it1--;
+            it2--;
+            unsigned int y = it2->second;
+            if(y > max_y) y = max_y;
+            if(y < it1->second) return dist;
+
+            for(y; y != it1->second-1; y--) {
+                if(map[map_->info.width*y + x]) {
+                    // We've hit an object, if it's closer then store
+                    // max y and distance
+                    double new_dist = sqrt(pow(y-p.y, 2) + pow(x-p.x, 2));
+                    new_dist *= map_->info.resolution;
+                    if(new_dist < dist) {
+                        dist = new_dist;
+                        max_y = y;
+                    }
+                }
+            }
+        }
+        // In case we didn't return in the loop
+        return dist;
+    }
+    // Ray 2 is on the left, but ray 1 is on the right - swap x and y
+    else if(0 > r1ang) {
+        auto it1 = ray1.begin();
+        auto it2 = ray2.begin();
+        double dist = 1e10;
+        unsigned int max_x = map_->info.width;
+        for(unsigned int y = it1->second; y != map_->info.height; y++) {
+            while(it1->second <= y && it1 != ray1.end()-1) it1++;
+            while(it2->second <= y && it2 != ray2.end()-1) it2++;
+            it1--;
+            it2--;
+            unsigned int x = it1->first;
+            if(x > max_x) x = max_x;
+            if(x < it2->first) return dist;
+
+            for(x; x != it2->first-1; x--) {
+                if(map[map_->info.width*y + x]) {
+                    // We've hit an object, if it's closer then store
+                    // max y and distance
+                    double new_dist = sqrt(pow(y-p.y, 2) + pow(x-p.x, 2));
+                    new_dist *= map_->info.resolution;
+                    if(new_dist < dist) {
+                        dist = new_dist;
+                        max_x = x;
+                    }
+                }
+            }
+        }
+        // In case we didn't return in the loop
+        return dist;
+    }
+    // Ray 1 is on the left, but ray 2 is on the right
+    else {
+        auto it1 = ray1.begin();
+        auto it2 = ray2.begin();
+        double dist = 1e10;
+        unsigned int max_x = map_->info.width;
+        for(unsigned int y = it1->second; y != -1; y--) {
+            while(it1->second >= y && it1 != ray1.end()-1) it1++;
+            while(it2->second >= y && it2 != ray2.end()-1) it2++;
+            it1--;
+            it2--;
+            unsigned int x = it2->first;
+            if(x > max_x) x = max_x;
+            if(x < it1->first) return dist;
+
+            for(x; x != it1->first-1; x--) {
+                if(map[map_->info.width*y + x]) {
+                    // We've hit an object, if it's closer then store
+                    // max y and distance
+                    double new_dist = sqrt(pow(y-p.y, 2) + pow(x-p.x, 2));
+                    new_dist *= map_->info.resolution;
+                    if(new_dist < dist) {
+                        dist = new_dist;
+                        max_x = x;
+                    }
+                }
+            }
+        }
+        // In case we didn't return in the loop
+        return dist;
+    }
 }
 
-std::vector<unsigned int> MapManager::ray_cast(
+std::vector<std::pair<unsigned int, unsigned int>> MapManager::ray_cast(
     const geometry_msgs::Point& p, double ang)
 {
     double th = 2*acos(map_->info.origin.orientation.w);
@@ -260,8 +398,8 @@ std::vector<unsigned int> MapManager::ray_cast(
 
     ang -= th;
     
-    double rx = cos(th);
-    double ry = sin(th);
+    double rx = cos(ang);
+    double ry = sin(ang);
 
     int signx = rx >= 0 ? 1 : -1;
     int signy = ry >= 0 ? 1 : -1;
@@ -275,29 +413,48 @@ std::vector<unsigned int> MapManager::ray_cast(
     double tilex = (cos(th)*dx - sin(th)*dy) / map_->info.resolution + 0.5;
     double tiley = (sin(th)*dx + cos(th)*dy) / map_->info.resolution + 0.5;
 
+    if(tilex >= map_->info.width) {
+        ROS_INFO_STREAM("tilex: " << tilex);
+        tilex = map_->info.width - 1;
+    }
+    if(tiley >= map_->info.height) {
+        ROS_INFO_STREAM("tiley: " << tiley);
+        tiley = map_->info.height - 1;
+    }
+    if(tilex < 0) {
+        ROS_INFO_STREAM("tilex: " << tilex);
+        tilex = 0;
+    }
+    if(tiley < 0) {
+        ROS_INFO_STREAM("tiley: " << tiley);
+        tiley = 0;
+    }
+
     double t = 0;
 
     double dtx = ((tilex + offsetx)*map_->info.resolution - curx) / rx;
     double dty = ((tiley + offsety)*map_->info.resolution - cury) / ry;
 
-    std::vector<unsigned int> ray;
-    while(tilex >= 0 && tilex < map_->info.height &&
-          tiley >= 0 && tiley < map_->info.width) 
+    std::vector<std::pair<unsigned int, unsigned int>> ray;
+    while(tilex >= 0 && tilex < map_->info.width &&
+          tiley >= 0 && tiley < map_->info.height) 
     {
-        ray.push_back(tiley*map_->info.height + tilex);
+        ray.emplace_back(tilex, tiley);
+
+        dtx = ((tilex + offsetx)*map_->info.resolution - curx) / rx; 
+        dty = ((tiley + offsety)*map_->info.resolution - cury) / ry;
 
         if(dtx < dty) {
             t += dtx;
             tilex += signx;
-            dtx += signx * map_->info.resolution / rx - dtx;
-            dty -= dtx;
         }
         else {
             t += dty;
             tiley += signy;
-            dtx -= dty;
-            dty += signy * map_->info.resolution / ry - dty;
         }
+
+        curx = p.x + rx * t;
+        cury = p.y + ry * t;
     }
 
     return ray;

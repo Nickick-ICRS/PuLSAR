@@ -117,7 +117,7 @@ private:
      *
      * @param msg The message containing the map.
      */
-    void map_cb(const nav_msgs::OccupancyGridConstPtr& msg);
+    void map_cb(const nav_msgs::OccupancyGridPtr& msg);
 
     /**
      * Get the tiles which form the ray defined by a point and angle.
@@ -126,13 +126,17 @@ private:
      *
      * @param ang The angle of the ray.
      *
-     * @return A vector of tiles which contact the ray.
+     * @return A vector of tile x and y coordinates which contact the ray.
      */
-    std::vector<unsigned int> ray_cast(
+    std::vector<std::pair<unsigned int, unsigned int>> ray_cast(
         const geometry_msgs::Point& p, double ang);
 
     /**
-     * Perform a cone casting operation.
+     * @brief Perform a cone casting operation.
+     *
+     * Perform a cone casting operation. This probably doesn't work properly
+     * if the spread angle is greater than 90 degrees, but that would be a
+     * pretty unuseable range sensor so...
      *
      * @param p The point from which to start the cast.
      *
@@ -156,8 +160,7 @@ private:
      *
      * @param radius The radius around which we care.
      *
-     * @return List of the location of the tiles used by the robot within
-     *         the map. E.g. {50, 51} would be map_[50] and map_[51].
+     * @return List of the tiles used by the robot within the map.
      */
     std::vector<unsigned int> get_tiles(
         const geometry_msgs::Point& p, float radius);
@@ -180,7 +183,7 @@ private:
      */
     void update_map_with_robot(std::string robot_name);
 
-    nav_msgs::OccupancyGridConstPtr map_;
+    nav_msgs::OccupancyGridPtr map_;
     int8_t* map_with_robots_;
 
     std::map<std::string, geometry_msgs::Pose> robot_poses_;

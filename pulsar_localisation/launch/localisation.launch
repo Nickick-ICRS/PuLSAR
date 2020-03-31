@@ -1,7 +1,7 @@
 <launch>
     <arg name="num_robots" default="1"/>
     <node name="pulsar_localisation" pkg="pulsar_localisation"
-          type="localisation_node" output="screen">
+          type="localisation_node" output="screen" launch-prefix="gdb --args">
         <!-- Map is on the topic '<topic>' -->
         <param name="map_topic" value="map"/>
 
