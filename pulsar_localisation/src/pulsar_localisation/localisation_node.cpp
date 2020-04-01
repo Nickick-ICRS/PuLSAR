@@ -157,11 +157,10 @@ void LocalisationNode::loop() {
         
         c.points.clear();
         for(unsigned int i = 0; i < 100; i++) {
-            p.x = 0;//dist(el);
-            p.y = 0;//dist(el);
+            p.x = dist(el);
+            p.y = dist(el);
             double ang = M_PI * dist(el);
-            double dist = map_man_->cone_cast_plain_map(
-                p, ang, 0.1);
+            double dist = map_man_->cone_cast_plain_map(p, ang, 0.1);
             geometry_msgs::Point32 pt;
             pt.x = dist*cos(ang) + p.x;
             pt.y = dist*sin(ang) + p.y;

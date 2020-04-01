@@ -111,7 +111,7 @@ public:
     double cone_cast_with_bots(
         const geometry_msgs::Point& p, double ang, double spread,
         std::string robot_name);
-private:
+//private:
     /**
      * Callback to receive the map stored on the map server.
      *
@@ -120,16 +120,18 @@ private:
     void map_cb(const nav_msgs::OccupancyGridPtr& msg);
 
     /**
-     * Get the tiles which form the ray defined by a point and angle.
+     * Cast a ray defined by a point and angle.
      *
      * @param p The point from which to start the ray.
      *
      * @param ang The angle of the ray.
      *
-     * @return A vector of tile x and y coordinates which contact the ray.
+     * @param map The map within which to cast.
+     *
+     * @return Distance to the first object hit by the ray.
      */
-    std::vector<std::pair<unsigned int, unsigned int>> ray_cast(
-        const geometry_msgs::Point& p, double ang);
+    double ray_cast(
+        const geometry_msgs::Point& p, double ang, const int8_t *map);
 
     /**
      * @brief Perform a cone casting operation.
