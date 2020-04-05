@@ -1,10 +1,12 @@
 <launch>
-    <arg name="robot_ns" default="PuLSAR"/>
+    <arg name="robot_ns" default="pulsar_0"/>
     <arg name="launch_gazebo" default="true"/>
     <arg name="start_x" default="0"/>
     <arg name="start_y" default="0"/>
     <arg name="start_yaw" default="0"/>
     <arg name="start_z" value="0.02"/>
+
+    <arg name="map_file" default="$(find pulsar_gazebo)/maps/map.yaml"/>
 
     <!-- Launch Gazebo -->
     <group if="$(arg launch_gazebo)">
@@ -19,6 +21,9 @@
             <arg name="verbose" value="true"/>
             <arg name="physics" value="bullet"/>
         </include>
+
+        <node name="map_server" pkg="map_server" type="map_server"
+              args="$(arg map_file)"/>
     </group>
 
     <group ns="$(arg robot_ns)">

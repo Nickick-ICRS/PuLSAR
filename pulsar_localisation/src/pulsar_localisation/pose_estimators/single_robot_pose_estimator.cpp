@@ -12,7 +12,8 @@ SingleRobotPoseEstimator::SingleRobotPoseEstimator(
     std::string map_frame, geometry_msgs::Pose initial_pose,
     std::string odom_topic)
     
-    :name_(name), cloud_gen_(cloud_gen), rd_(), gen_(rd_())
+    :name_(name), cloud_gen_(cloud_gen), rd_(), gen_(rd_()), 
+    range_model_(map_frame)
 {
     pose_estimate_.pose.pose = initial_pose;
     pose_estimate_.header.frame_id = map_frame;

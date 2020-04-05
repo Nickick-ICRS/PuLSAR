@@ -33,5 +33,18 @@
                value="middle_range_finder/range"/>
         <param name="robot0_range_topic2"
                value="right_range_finder/range"/>
+        
+        <!-- Intrinsic parameters of the range sensors. See Probabilistic
+             Robotics by Thrun et al. -->
+        <param name="zhit"     value="36.53919"/>
+        <param name="zshort"   value="38.18770"/>
+        <param name="zmax"     value="0.024810"/>
+        <param name="zrand"    value="38.58597"/>
+        <param name="sigmahit" value="28.81742"/>
+        <param name="lamshort" value="2.403784"/>
+
+        <!-- Constant representing how unreliable old data is considered 
+             to be -->
+        <param name="ztime" value="0.8"/>
     </node>
 </launch>

@@ -1,19 +1,20 @@
 #include "sensor_models/range_cloud_sensor_model.hpp"
 
 double RangeCloudSensorModel::lamshort_;
-double RangeCloudSensorModel::sigma2_;
+double RangeCloudSensorModel::sigmahit_;
 double RangeCloudSensorModel::ztime_;
 double RangeCloudSensorModel::zhit_;
 double RangeCloudSensorModel::zshort_;
 double RangeCloudSensorModel::zmax_;
 double RangeCloudSensorModel::zrand_;
 
-RangeCloudSensorModel::RangeCloudSensorModel(
-    std::shared_ptr<MapManager> map_man, float history_length,
-    float time_resolution, std::string map_frame)
-        :tf_buffer_(ros::Duration(history_length)), tf2_(tf_buffer_),
-        history_length_(history_length), time_resolution_(time_resolution),
-        map_man_(map_man), map_frame_(map_frame)
+std::shared_ptr<MapManager> RangeCloudSensorModel::map_man_;
+float RangeCloudSensorModel::history_length_;
+float RangeCloudSensorModel::time_resolution_;
+
+RangeCloudSensorModel::RangeCloudSensorModel(std::string map_frame)
+    :tf_buffer_(ros::Duration(history_length_)), tf2_(tf_buffer_),
+    map_frame_(map_frame)
 {
     // ctor
 }
@@ -145,6 +146,7 @@ float RangeCloudSensorModel::model(
         // an occupied area on the map
         float prob = zhit_*phit(z, ideal_z) + zshort_*pshort(z, ideal_z)
                    + zmax_*pmax(z) + zrand_*prand(z);
+        prob /= zhit_+zshort_+zmax_+zrand_;
 
         // Older points are less reliable, so increase the probability of
         // them being 'correct' such that they have less of a negative
@@ -164,30 +166,30 @@ float RangeCloudSensorModel::phit(
 {
     if(z.range > z.max_range || z.range < z.min_range) return 0;
     // Helper lambda
-    static auto N = [this](double z, double ideal_z, double sigma2) {
-        double a = 1/sqrt(2*M_PI*sigma2);
-        double b = exp(-0.5*pow(z-ideal_z, 2)/sigma2);
+    static auto N = [this](double z, double ideal_z, double sigmahit) {
+        double a = 1/sqrt(2*M_PI*sigmahit);
+        double b = exp(-0.5*pow(z-ideal_z, 2)/sigmahit);
         return a*b;
     };
     
     // Simpson's rule in a helper lambda
     static auto integral = [this](
-        const sensor_msgs::Range& z, double ideal_z, double sigma2)
+        const sensor_msgs::Range& z, double ideal_z, double sigmahit)
     {
         const int NUM_DIVISIONS = 2*10;
         double delta = z.max_range / (double)NUM_DIVISIONS;
         double area = 0;
         for(double zi = 0; zi < z.max_range; zi += 2 * delta) {
-            area += N(zi, ideal_z, sigma2)
-                 + 4 * N(zi+delta, ideal_z, sigma2)
-                 + N(zi+2*delta, ideal_z, sigma2);
+            area += N(zi, ideal_z, sigmahit)
+                 + 4 * N(zi+delta, ideal_z, sigmahit)
+                 + N(zi+2*delta, ideal_z, sigmahit);
         }
         area *= delta/3;
         return area;
     };
 
-    static double eta = 1/integral(z, ideal_z, sigma2_);
-    return eta * N(z.range, ideal_z, sigma2_);
+    double eta = 1/integral(z, ideal_z, sigmahit_);
+    return eta * N(z.range, ideal_z, sigmahit_);
 }
 
 float RangeCloudSensorModel::pshort(

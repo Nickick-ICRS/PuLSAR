@@ -11,6 +11,7 @@
 #include <nav_msgs/Odometry.h>
 
 #include "cloud_generator/cloud_generator.hpp"
+#include "sensor_models/range_cloud_sensor_model.hpp"
 
 /**
  * @brief Estimates the pose of a single robot.
@@ -136,6 +137,7 @@ private:
 
     std::string name_;
     const std::shared_ptr<CloudGenerator> cloud_gen_;
+    RangeCloudSensorModel range_model_;
     geometry_msgs::PoseWithCovarianceStamped pose_estimate_;
 
     ros::NodeHandle nh_;

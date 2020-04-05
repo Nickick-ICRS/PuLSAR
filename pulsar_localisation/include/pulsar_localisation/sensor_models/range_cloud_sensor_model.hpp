@@ -23,10 +23,10 @@ class RangeCloudSensorModel {
 public:
     /**
      * Constructor for the RangeCloudSensorModel class.
+     *
+     * @param map_frame The map frame of the robot.
      */
-    RangeCloudSensorModel(
-        std::shared_ptr<MapManager> map_man, float history_length,
-        float time_resolution, std::string map_frame);
+    RangeCloudSensorModel(std::string map_frame);
     ~RangeCloudSensorModel();
 
     /**
@@ -95,25 +95,24 @@ private:
      */
     float prand(const sensor_msgs::Range& z);
 
-    // Map
-    std::shared_ptr<MapManager> map_man_;
-
     std::vector<geometry_msgs::PoseWithCovarianceStamped> pose_estimates_;
 
     tf2_ros::Buffer tf_buffer_;
     tf2_ros::TransformListener tf2_;
 
-    float history_length_;
-    float time_resolution_;
     std::string map_frame_;
 
     static double lamshort_;
-    static double sigma2_;
+    static double sigmahit_;
     static double ztime_;
     static double zhit_;
     static double zshort_;
     static double zmax_;
     static double zrand_;
+
+    static std::shared_ptr<MapManager> map_man_;
+    static float history_length_;
+    static float time_resolution_;
 
     friend class LocalisationNode;
 };

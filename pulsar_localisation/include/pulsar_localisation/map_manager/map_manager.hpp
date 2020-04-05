@@ -111,7 +111,7 @@ public:
     double cone_cast_with_bots(
         const geometry_msgs::Point& p, double ang, double spread,
         std::string robot_name);
-//private:
+private:
     /**
      * Callback to receive the map stored on the map server.
      *

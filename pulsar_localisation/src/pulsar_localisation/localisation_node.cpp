@@ -154,7 +154,7 @@ void LocalisationNode::loop() {
         sleeper.sleep();
 
         cloud_gen_->publish_cloud("pulsar_0");
-        
+       /* 
         c.points.clear();
         for(unsigned int i = 0; i < 100; i++) {
             p.x = dist(el);
@@ -168,6 +168,7 @@ void LocalisationNode::loop() {
         }
         c.header.stamp = ros::Time::now();
         pub.publish(c);
+        */
     }
 }
 
@@ -323,6 +324,15 @@ void LocalisationNode::get_ros_parameters() {
            "Failed to get param 'history_length'. Defaulting to: "
            << history_length_ << ".");
     }
+    RangeCloudSensorModel::history_length_ = history_length_;
+
+    if(!ros::param::param<float>(
+        "~time_resolution", RangeCloudSensorModel::time_resolution_, 1e-2)) 
+    {
+        ROS_WARN_STREAM(
+           "Failed to get param 'time_resolution'. Defaulting to: "
+           << RangeCloudSensorModel::time_resolution_ << ".");
+    }
 
     if(!ros::param::param<double>(
         "~a1", SingleRobotPoseEstimator::a1_, 0.2))
@@ -381,11 +391,11 @@ void LocalisationNode::get_ros_parameters() {
     }
 
     if(!ros::param::param<double>(
-        "~sigma2", RangeCloudSensorModel::sigma2_, 0.2))
+        "~sigmahit", RangeCloudSensorModel::sigmahit_, 0.2))
     {
         ROS_WARN_STREAM(
-            "Failed to get param sigma2. Defaulting to '"
-            << RangeCloudSensorModel::sigma2_ << "'.");
+            "Failed to get param sigmahit. Defaulting to '"
+            << RangeCloudSensorModel::sigmahit_ << "'.");
     }
 
     if(!ros::param::param<double>(
