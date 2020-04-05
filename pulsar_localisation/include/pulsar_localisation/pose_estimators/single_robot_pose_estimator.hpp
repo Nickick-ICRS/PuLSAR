@@ -2,8 +2,8 @@
 #define __SINGLE_ROBOT_POSE_ESTIMATOR__
 
 #include <memory>
-#include <cmath>
 #include <random>
+#include <mutex>
 
 #include <ros/ros.h>
 #include <geometry_msgs/Pose.h>
@@ -35,11 +35,13 @@ public:
      *
      * @param odom_topic The topic on which odometry measurements from the
      *                   robot are published.
+     *
+     * @param base_link_frame The name of the base_link frame of the robot.
      */
     SingleRobotPoseEstimator(
         std::string name, const std::shared_ptr<CloudGenerator>& cloud_gen,
         std::string map_frame, geometry_msgs::Pose initial_pose,
-        std::string odom_topic);
+        std::string odom_topic, std::string base_link_frame);
     ~SingleRobotPoseEstimator();
     
     /**
@@ -56,6 +58,13 @@ public:
     geometry_msgs::PoseWithCovarianceStamped& get_pose_estimate() {
         return pose_estimate_;
     };
+
+    /**
+     * Get all of the current pose estimates. Useful for debugging.
+     */
+    std::vector<geometry_msgs::Pose>& get_pose_estimates() {
+        return pose_estimate_cloud_;
+    }
 private:
     /**
      * Odometry callback from the robot.
@@ -135,10 +144,23 @@ private:
         const nav_msgs::Odometry& ut,
         const geometry_msgs::Pose& xt_1);
 
+    /**
+     * @brief Updates the overall pose estimate and covariance.
+     *
+     * Uses the current cloud of pose estimate points to calculate the
+     * average pose estimate and covariance of the estimate.
+     */
+    void update_pose_estimate_with_covariance();
+
     std::string name_;
+    std::string base_link_frame_;
     const std::shared_ptr<CloudGenerator> cloud_gen_;
     RangeCloudSensorModel range_model_;
     geometry_msgs::PoseWithCovarianceStamped pose_estimate_;
+    std::vector<geometry_msgs::Pose> pose_estimate_cloud_;
+    nav_msgs::Odometry recent_odom_;
+
+    std::mutex odom_mut_;
 
     ros::NodeHandle nh_;
     ros::Subscriber odom_sub_;

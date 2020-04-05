@@ -3,39 +3,41 @@
 #include <chrono> // For std::chrono::milliseconds
 #include <mutex> // For std::unique_lock
 
-MapManager::MapManager(std::string map_topic) :map_with_robots_(nullptr) {
+MapManager::MapManager(std::string map_topic) 
+    :map_with_robots_(nullptr), map_(new nav_msgs::OccupancyGrid)
+{
     map_sub_ = nh_.subscribe(map_topic, 1, &MapManager::map_cb, this);
 
     // Block until the map comes online
-    bool waiting_for_map = true;
+    waiting_for_map_ = true;
     ROS_ERROR("1");
-    while(waiting_for_map) {
+    while(waiting_for_map_) {
         ros::spinOnce();
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
         ROS_WARN_STREAM_DELAYED_THROTTLE(
             5, "No map received from '" << map_topic 
             << "' yet. Will continue waiting...");
-        std::shared_lock<std::shared_mutex> lock(map_mutex_);
-        if(map_)
-            waiting_for_map = false;
     }
     ROS_ERROR("2");
 }
 
 MapManager::~MapManager() {
     if(map_with_robots_) {
-        std::unique_lock<std::shared_mutex> lock(map_mutex_);
+        std::lock_guard<std::shared_mutex> lock(map_mutex_);
         delete map_with_robots_;
     }
 }
 
 void MapManager::map_cb(const nav_msgs::OccupancyGridPtr& msg) {
-    // This lock lets us have multiple reads *or* one write at a time
-    std::unique_lock<std::shared_mutex> lock(map_mutex_);
-    map_ = msg;
+    // This mutex lets us have multiple reads *or* one write at a time
+    std::lock_guard<std::shared_mutex> lock(map_mutex_);
+    map_->header = msg->header;
+    map_->info = msg->info;
+    map_->data = msg->data;
     if(map_with_robots_) delete map_with_robots_;
     map_with_robots_ = new int8_t[msg->data.size()];
     update_map_with_robots();
+    waiting_for_map_ = false;
 }
 
 bool MapManager::is_pose_valid(
@@ -225,7 +227,7 @@ double MapManager::cone_cast_with_bots(
     int8_t *map_copy;
     {
         std::shared_lock<std::shared_mutex> lock(map_mutex_);
-        map_copy = new int8_t(map_->data.size());
+        map_copy = new int8_t[map_->data.size()];
         for(unsigned int i = 0; i < map_->data.size(); i++) {
             map_copy[i] = map_with_robots_[i];
         }

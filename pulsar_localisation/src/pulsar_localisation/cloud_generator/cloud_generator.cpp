@@ -120,10 +120,11 @@ void CloudGenerator::range_cb(const sensor_msgs::RangeConstPtr& msg) {
     // Transform the point from the range finder frame into the cloud frame
     std::string odom = prefix + '/' + odom_name_;
     geometry_msgs::PointStamped point;
-    point.header = msg->header;
-    point.point.x = msg->range;
+    geometry_msgs::PointStamped point2;
+    point2.header = msg->header;
+    point2.point.x = msg->range;
     try {
-        tf_buffer_.transform(point, point, odom);
+        tf_buffer_.transform(point2, point, odom);
     }
     catch(tf2::TransformException &ex) {
         ROS_WARN("Failed to transform point: %s\n", ex.what());

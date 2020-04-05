@@ -81,6 +81,12 @@ public:
      * @param name The name (tf_prefix of the robot) of the point cloud.
      */
     void clean_cloud(std::string name);
+
+    const std::vector<sensor_msgs::Range>& get_raw_data(
+        std::string robot_name) 
+    {
+        return robot_raw_data_[robot_name];
+    };
 private:
     /**
      * @brief Updates a single point cloud by removing old data.

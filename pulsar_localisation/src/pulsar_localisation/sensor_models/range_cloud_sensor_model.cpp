@@ -73,34 +73,42 @@ float RangeCloudSensorModel::model(
     float q = 1;
     ros::Time now = ros::Time::now();
     for(const auto& z : c) {
+        // Temporary fix, but sometimes points don't have a frame_id???
+        // Why ???
+        if(z.header.frame_id == "")
+            continue;
         // Transform the point into the estimated pose coordinate frame, for
         // the closest pose in the history
+        geometry_msgs::PointStamped pt2;
         geometry_msgs::PointStamped pt;
-        pt.header.frame_id = z.header.frame_id;
-        pt.header.stamp = z.header.stamp;
-        pt.point.x = z.range;
+        pt2.header.frame_id = z.header.frame_id;
+        pt2.header.stamp = z.header.stamp;
+        pt2.point.x = z.range;
 
         // Flag to say whether this point is relative to the new pose
         // estimate, or an older one in the past
         bool in_past = true;
         
         try {
-            tf_buffer_.transform(pt, pt, map_frame_);
+            tf_buffer_.transform(pt2, pt, map_frame_);
         }
-        catch(const tf2::TransformException* ex) {
-            if(!dynamic_cast<const tf2::ExtrapolationException*>(ex) &&
-               !dynamic_cast<const tf2::LookupException*>(ex))
-            {
-                ROS_WARN_STREAM(ex->what());
-                continue;
-            }
+        catch(const tf2::ConnectivityException& ex) {
+            ROS_WARN_STREAM(ex.what());
+        }
+        catch(const tf2::InvalidArgumentException& ex) {
+            ROS_WARN_STREAM(ex.what());
+        }
+        catch(const tf2::TimeoutException& ex) {
+            ROS_WARN_STREAM(ex.what());
+        }
+        catch(const tf2::TransformException& ex) {
             // If the transform doesn't exist yet, or requires extrapolation
             // into the future then we transform the point with the most
             // recent pose (i.e. the given one)
-
+            
             // First try to transform into the base_link frame though
             try {
-                tf_buffer_.transform(pt, pt, base_link_frame);
+                tf_buffer_.transform(pt2, pt, base_link_frame);
             }
             catch(const tf2::TransformException& ex) {
                 ROS_WARN_STREAM(ex.what());

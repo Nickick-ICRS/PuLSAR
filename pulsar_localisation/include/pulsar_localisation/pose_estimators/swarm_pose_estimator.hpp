@@ -35,14 +35,18 @@ public:
      *
      * @param robot_odom_topics Map of the topic names of robot odometry 
      *                          measurements keyed by name.
+     * 
+     * @param robot_base_links Map of the base_link frames of the robots,
+     *                         keyed by name.
      *
      * @param map_frame The map frame of the whole swarm.
      */
     SwarmPoseEstimator(
         const std::shared_ptr<CloudGenerator>& cloud_gen,
-        std::string map_frame, std::vector<std::string> robot_names, 
-        std::map<std::string, geometry_msgs::Pose> initial_robot_poses,
-        std::map<std::string, std::string> robot_odom_topics);
+        std::string map_frame, std::vector<std::string>& robot_names, 
+        std::map<std::string, geometry_msgs::Pose>& initial_robot_poses,
+        std::map<std::string, std::string>& robot_odom_topics,
+        std::map<std::string, std::string>& robot_base_links);
     ~SwarmPoseEstimator();
 
     /**
@@ -79,6 +83,9 @@ private:
 
     std::string map_frame_;
     std::shared_ptr<CloudGenerator> cloud_gen_;
+
+    // For debugging
+    friend class LocalisationNode;
 };
 
 #endif // __SWARM_POSE_ESTIMATOR_HPP__

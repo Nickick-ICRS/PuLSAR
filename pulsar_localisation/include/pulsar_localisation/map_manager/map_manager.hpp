@@ -198,6 +198,8 @@ private:
     /* We can have multiple threads reading the map, or we can have ONE
      * thread writing to it. */
     std::shared_mutex map_mutex_;
+
+    bool waiting_for_map_;
 };
 
 #endif // __MAP_MANAGER_HPP__

@@ -77,6 +77,8 @@ private:
     // Map of the topics on which odometry data is published for each robot
     // type
     std::map<std::string, std::string> odometry_sensor_topics_;
+    // Map of the base link frame name for each robot type
+    std::map<std::string, std::string> base_link_frames_;
     // Map of initial poses of the robots
     std::map<std::string, geometry_msgs::Pose> initial_pose_estimates_;
 
@@ -103,9 +105,10 @@ LocalisationNode::LocalisationNode() :running_(true) {
     std::vector<std::string> all_topics;
     std::vector<std::string> robot_names;
     std::map<std::string, std::string> robot_odom_map;
+    std::map<std::string, std::string> robot_base_link_map;
     std::stringstream ss;
     std::string s;
-    // Create the full set of topics for each robot
+    // Create the full set of topics and maps for each robot
     for(auto const & pair : num_robots_) {
         for(int i = 0; i < pair.second; i++) {
             ss.clear();
@@ -116,6 +119,8 @@ LocalisationNode::LocalisationNode() :running_(true) {
                 all_topics.push_back(pair.first+s+"/"+topic);
             }
             robot_names.push_back(pair.first+s);
+            robot_base_link_map[pair.first+s] = 
+                pair.first+s+"/"+base_link_frames_[pair.first];
             robot_odom_map[pair.first+s] = 
                 pair.first+s + "/" + odometry_sensor_topics_[pair.first];
         }
@@ -124,10 +129,11 @@ LocalisationNode::LocalisationNode() :running_(true) {
     cloud_gen_.reset(new CloudGenerator(all_topics, history_length_));
 
     map_man_.reset(new MapManager(map_topic_));
+    RangeCloudSensorModel::map_man_ = map_man_;
 
     pose_est_.reset(new SwarmPoseEstimator(
         cloud_gen_, "map", robot_names, initial_pose_estimates_, 
-        robot_odom_map));
+        robot_odom_map, robot_base_link_map));
 
     main_thread_ = std::thread(&LocalisationNode::loop, this);
 }
@@ -139,7 +145,7 @@ LocalisationNode::~LocalisationNode() {
 
 #include <sensor_msgs/PointCloud.h>
 void LocalisationNode::loop() {
-    ros::Rate sleeper(100);
+    ros::Rate sleeper(30);
 
     ros::NodeHandle nh("~");
     ros::Publisher pub = nh.advertise<sensor_msgs::PointCloud>("test", 1);
@@ -154,21 +160,19 @@ void LocalisationNode::loop() {
         sleeper.sleep();
 
         cloud_gen_->publish_cloud("pulsar_0");
-       /* 
+
+        pose_est_->robot_pose_estimators_["pulsar_0"]->update_estimate();
+        auto& pts = pose_est_->robot_pose_estimators_["pulsar_0"]->get_pose_estimates();
         c.points.clear();
-        for(unsigned int i = 0; i < 100; i++) {
-            p.x = dist(el);
-            p.y = dist(el);
-            double ang = M_PI * dist(el);
-            double dist = map_man_->cone_cast_plain_map(p, ang, 0.1);
-            geometry_msgs::Point32 pt;
-            pt.x = dist*cos(ang) + p.x;
-            pt.y = dist*sin(ang) + p.y;
-            c.points.push_back(pt);
+        for(auto& pose : pts) {
+            geometry_msgs::Point32 p;
+            p.x = pose.position.x;
+            p.y = pose.position.y;
+            p.z = pose.position.z;
+            c.points.push_back(p);
         }
         c.header.stamp = ros::Time::now();
         pub.publish(c);
-        */
     }
 }
 
@@ -225,6 +229,15 @@ void LocalisationNode::get_ros_parameters() {
                 << odometry_sensor_topics_[robot_prefix] 
                 << "'. No robots of this type will be "
                 << "included in the localisation.");
+        }
+        if(!ros::param::param<std::string>(
+            "~robot"+s1+"_base_link_frame",
+            base_link_frames_[robot_prefix], "base_link"))
+        {
+            ROS_WARN_STREAM(
+                "Failed to get param 'robot" << s1 << "_base_link_frame"
+                << "'. Defaulting to '" << base_link_frames_[robot_prefix]
+                << "'.");
         }
         int j = 0;
         std::string s2;

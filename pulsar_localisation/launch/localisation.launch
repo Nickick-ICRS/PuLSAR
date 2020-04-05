@@ -1,7 +1,8 @@
 <launch>
     <arg name="num_robots" default="1"/>
     <node name="pulsar_localisation" pkg="pulsar_localisation"
-          type="localisation_node" output="screen" launch-prefix="gdb --args">
+          type="localisation_node" output="screen" 
+          launch-prefix="gdb --args">
         <!-- Map is on the topic '<topic>' -->
         <param name="map_topic" value="map"/>
 
@@ -18,14 +19,18 @@
 
         <!-- Keep range data in the filter for up to <value> seconds -->
         <param name="history_length" value="10"/>
+        <!-- 0.01 second resolution in time keeping for the range sensor
+             model -->
+        <param name="time_resolution" value="0.01"/>
 
         <!-- Robots are called pulsar_X -->
         <param name="robot0" value="pulsar_"/>
         <!-- X ranges from 0 to <quantity> -->
         <param name="robot0_quantity" value="$(arg num_robots)"/>
         <!-- Robots have odometry on the topic 'pulsar_X/<topic>' -->
-        <param name="robot0_odom_topic"
-               value="odometry/filtered"/>
+        <param name="robot0_odom_topic" value="odometry/filtered"/>
+        <!-- Robots have base_links with frame name 'pulsar_X/<name>' -->
+        <param name="robot0_base_link_frame" value="base_link"/>
         <!-- Robots have range sensors on the topic 'pulsar_X/<topic>' -->
         <param name="robot0_range_topic0" 
                value="left_range_finder/range"/>
