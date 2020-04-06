@@ -1,24 +1,30 @@
 <launch>
     <arg name="num_robots" default="1"/>
+    <arg name="valgrind" default="false"/>
+    <arg name="gdb" default="false"/>
+
+    <arg name="prefix" value="$(eval 'valgrind --tool=callgrind --callgrind-out-file=/tmp/callgrind.out' if arg('valgrind') else 'gdb --args' if arg('gdb') else '')"/>
     <node name="pulsar_localisation" pkg="pulsar_localisation"
-          type="localisation_node" output="screen" 
-          launch-prefix="gdb --args">
+          type="localisation_node" output="screen"
+          launch-prefix="$(arg prefix)">
+
         <!-- Map is on the topic '<topic>' -->
         <param name="map_topic" value="map"/>
 
         <!-- Robot noise parameters. See Probabilistic Robotics by Thrun
              et al. -->
-        <param name="a1" value="0.2"/>
-        <param name="a2" value="0.2"/>
-        <param name="a3" value="0.2"/>
-        <param name="a4" value="0.2"/>
+        <param name="a1" value="0.0001"/>
+        <param name="a2" value="0.001"/>
+        <param name="a3" value="0.01"/>
+        <param name="a4" value="0.01"/>
         <!-- Exponential parameters for augmented MCL, 0 <= aslow < afast.
              See Probabilistic Robotics by Thrun et al. -->
-        <param name="aslow" value="0.05"/>
-        <param name="afast" value="0.5"/>
+        <param name="aslow" value="0.001"/>
+        <param name="afast" value="0.1"/>
 
-        <!-- Keep range data in the filter for up to <value> seconds -->
-        <param name="history_length" value="10"/>
+        <!-- Keep range data in the filter for up to <value> seconds. 
+             Large values will (obviously) make this slowwwww... -->
+        <param name="history_length" value="4"/>
         <!-- 0.01 second resolution in time keeping for the range sensor
              model -->
         <param name="time_resolution" value="0.01"/>
@@ -41,15 +47,15 @@
         
         <!-- Intrinsic parameters of the range sensors. See Probabilistic
              Robotics by Thrun et al. -->
-        <param name="zhit"     value="36.53919"/>
-        <param name="zshort"   value="38.18770"/>
-        <param name="zmax"     value="0.024810"/>
-        <param name="zrand"    value="38.58597"/>
-        <param name="sigmahit" value="28.81742"/>
-        <param name="lamshort" value="2.403784"/>
+        <param name="zhit"     value="0.95"/>
+        <param name="zshort"   value="0.1"/>
+        <param name="zmax"     value="0.05"/>
+        <param name="zrand"    value="0.05"/>
+        <param name="sigmahit" value="0.03"/>
+        <param name="lamshort" value="0.1"/>
 
         <!-- Constant representing how unreliable old data is considered 
              to be -->
-        <param name="ztime" value="0.8"/>
+        <param name="ztime" value="1.0"/>
     </node>
 </launch>

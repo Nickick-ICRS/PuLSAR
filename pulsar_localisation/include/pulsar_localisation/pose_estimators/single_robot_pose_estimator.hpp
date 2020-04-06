@@ -12,6 +12,7 @@
 
 #include "cloud_generator/cloud_generator.hpp"
 #include "sensor_models/range_cloud_sensor_model.hpp"
+#include "map_manager/map_manager.hpp"
 
 /**
  * @brief Estimates the pose of a single robot.
@@ -30,6 +31,8 @@ public:
      * @param cloud_gen Pointer to an initialised cloud generator class
      *                  instance.
      *
+     * @param map_man Pointer to an initialised map manager class instance.
+     *
      * @param initial_pose An initial estimate of the robot's pose relative
      *                     to the map frame.
      *
@@ -37,11 +40,14 @@ public:
      *                   robot are published.
      *
      * @param base_link_frame The name of the base_link frame of the robot.
+     *
+     * @param radius Approximate radius of the robot footprint.
      */
     SingleRobotPoseEstimator(
         std::string name, const std::shared_ptr<CloudGenerator>& cloud_gen,
-        std::string map_frame, geometry_msgs::Pose initial_pose,
-        std::string odom_topic, std::string base_link_frame);
+        const std::shared_ptr<MapManager>& map_man, std::string map_frame, 
+        geometry_msgs::Pose initial_pose, std::string odom_topic,
+        std::string base_link_frame, float radius);
     ~SingleRobotPoseEstimator();
     
     /**
@@ -101,6 +107,20 @@ private:
      * @return A valid pose for the robot.
      */
     geometry_msgs::Pose gen_random_valid_pose();
+    
+    /**
+     * @brief Generates a random valid pose for the robot.
+     * 
+     * Uses knowledge of the map to generate a random valid (i.e. not in a 
+     * wall) pose that the robot may be in. Does not take into consideration
+     * the poses of other robots in the swarm.
+     *
+     * @param p A pose with covariance about which to generate the point.
+     *
+     * @return A valid pose for the robot.
+     */
+    geometry_msgs::Pose gen_random_valid_pose(
+        const geometry_msgs::PoseWithCovariance& p);
 
     /**
      * @brief Calculate the probability of a occuring.
@@ -154,8 +174,12 @@ private:
 
     std::string name_;
     std::string base_link_frame_;
+    float radius_;
+
     const std::shared_ptr<CloudGenerator> cloud_gen_;
+    const std::shared_ptr<MapManager> map_man_;
     RangeCloudSensorModel range_model_;
+
     geometry_msgs::PoseWithCovarianceStamped pose_estimate_;
     std::vector<geometry_msgs::Pose> pose_estimate_cloud_;
     nav_msgs::Odometry recent_odom_;

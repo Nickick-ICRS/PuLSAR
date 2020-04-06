@@ -11,11 +11,13 @@ double SingleRobotPoseEstimator::a1_,
 
 SingleRobotPoseEstimator::SingleRobotPoseEstimator(
     std::string name, const std::shared_ptr<CloudGenerator>& cloud_gen,
-    std::string map_frame, geometry_msgs::Pose initial_pose,
-    std::string odom_topic, std::string base_link_frame)
+    const std::shared_ptr<MapManager>& map_man, std::string map_frame, 
+    geometry_msgs::Pose initial_pose, std::string odom_topic,
+    std::string base_link_frame, float radius)
     
-    :name_(name), cloud_gen_(cloud_gen), rd_(), gen_(rd_()), 
-    range_model_(map_frame), base_link_frame_(base_link_frame)
+    :name_(name), cloud_gen_(cloud_gen), map_man_(map_man), rd_(), 
+    gen_(rd_()), range_model_(map_frame, map_man), 
+    base_link_frame_(base_link_frame), radius_(radius)
 {
     pose_estimate_.pose.pose = initial_pose;
     pose_estimate_.header.frame_id = map_frame;
@@ -25,11 +27,14 @@ SingleRobotPoseEstimator::SingleRobotPoseEstimator(
     pose_estimate_.pose.covariance[7]  = 1e-6;
     pose_estimate_.pose.covariance[35] = 1e-6;
 
+    map_man_->set_robot_pose(name, initial_pose, radius);
+
     odom_sub_ = nh_.subscribe(
         odom_topic, 1, &SingleRobotPoseEstimator::odom_cb, this);
 
-    for(int i = 0; i < 100; i++) {
-        geometry_msgs::Pose p = gen_random_valid_pose();
+    // TODO: Generate poses with a distribution about initial_pose
+    for(int i = 0; i < 1000; i++) {
+        geometry_msgs::Pose p = gen_random_valid_pose(pose_estimate_.pose);
         pose_estimate_cloud_.push_back(p);
     }
 }
@@ -181,7 +186,6 @@ std::vector<geometry_msgs::Pose>
         // Update the motion model
         xt.push_back(sample_motion_model_odometry(ut, Xt_1[m]));
         // Update the measurement model
-        // TODO: FIX BOTTLENECK HERE
         wt.push_back(range_model_.model(
             xt[m], cloud_gen_->get_raw_data(name_), name_, 
             base_link_frame_));
@@ -231,7 +235,24 @@ geometry_msgs::Pose SingleRobotPoseEstimator::gen_random_valid_pose() {
         pose.orientation.z = sin(th/2);
         pose.orientation.w = cos(th/2);
     }
-    while(/*pose is invalid*/false);
+    while(!map_man_->is_pose_valid(pose, radius_));
+
+    return pose;
+}
+
+geometry_msgs::Pose SingleRobotPoseEstimator::gen_random_valid_pose(
+    const geometry_msgs::PoseWithCovariance& p) 
+{
+    geometry_msgs::Pose pose = p.pose;
+    double th = 2*acos(pose.orientation.w);
+    do {
+        pose.position.x += sample_normal_distribution(p.covariance[0]);
+        pose.position.y += sample_normal_distribution(p.covariance[7]);
+        th += sample_normal_distribution(p.covariance[35]);
+        pose.orientation.z = sin(th/2);
+        pose.orientation.w = cos(th/2);
+    }
+    while(!map_man_->is_pose_valid(pose, radius_));
 
     return pose;
 }

@@ -92,6 +92,7 @@ private:
 int main(int argc, char **argv) {
     ros::init(argc, argv, "pulsar_localisation");
     std::shared_ptr<LocalisationNode> node(new LocalisationNode());
+    ros::Rate r(100);
     ros::spin();
     // Ensure we fully cleanup before exiting
     node.reset();
@@ -106,6 +107,7 @@ LocalisationNode::LocalisationNode() :running_(true) {
     std::vector<std::string> robot_names;
     std::map<std::string, std::string> robot_odom_map;
     std::map<std::string, std::string> robot_base_link_map;
+    std::map<std::string, float> robot_radii_map;
     std::stringstream ss;
     std::string s;
     // Create the full set of topics and maps for each robot
@@ -123,17 +125,17 @@ LocalisationNode::LocalisationNode() :running_(true) {
                 pair.first+s+"/"+base_link_frames_[pair.first];
             robot_odom_map[pair.first+s] = 
                 pair.first+s + "/" + odometry_sensor_topics_[pair.first];
+            robot_radii_map[pair.first+s] = 0.035;
         }
     }
 
     cloud_gen_.reset(new CloudGenerator(all_topics, history_length_));
 
     map_man_.reset(new MapManager(map_topic_));
-    RangeCloudSensorModel::map_man_ = map_man_;
 
     pose_est_.reset(new SwarmPoseEstimator(
-        cloud_gen_, "map", robot_names, initial_pose_estimates_, 
-        robot_odom_map, robot_base_link_map));
+        cloud_gen_, map_man_, "map", robot_names, initial_pose_estimates_, 
+        robot_odom_map, robot_base_link_map, robot_radii_map));
 
     main_thread_ = std::thread(&LocalisationNode::loop, this);
 }
@@ -145,7 +147,7 @@ LocalisationNode::~LocalisationNode() {
 
 #include <sensor_msgs/PointCloud.h>
 void LocalisationNode::loop() {
-    ros::Rate sleeper(30);
+    ros::Rate sleeper(1.f/5.f);
 
     ros::NodeHandle nh("~");
     ros::Publisher pub = nh.advertise<sensor_msgs::PointCloud>("test", 1);
@@ -155,13 +157,16 @@ void LocalisationNode::loop() {
     std::random_device r;
     std::default_random_engine el(r());
     std::uniform_real_distribution<double> dist(-1, 1);
+    int loop = 0;
     while(running_) {
+        loop++;
         cloud_gen_->clean_all_clouds();
         sleeper.sleep();
 
         cloud_gen_->publish_cloud("pulsar_0");
 
-        pose_est_->robot_pose_estimators_["pulsar_0"]->update_estimate();
+        auto& pt = pose_est_->robot_pose_estimators_["pulsar_0"]->get_pose_estimate();
+        ROS_INFO_STREAM(pt);
         auto& pts = pose_est_->robot_pose_estimators_["pulsar_0"]->get_pose_estimates();
         c.points.clear();
         for(auto& pose : pts) {
@@ -173,6 +178,7 @@ void LocalisationNode::loop() {
         }
         c.header.stamp = ros::Time::now();
         pub.publish(c);
+        pose_est_->robot_pose_estimators_["pulsar_0"]->update_estimate();
     }
 }
 

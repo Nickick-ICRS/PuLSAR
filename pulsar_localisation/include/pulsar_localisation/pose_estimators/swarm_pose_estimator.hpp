@@ -27,6 +27,8 @@ public:
      * 
      * @param cloud_gen Pointer to an initialised cloud generator class 
      *                  instance.
+     *
+     * @param map_man Pointer to an initialised map manager class instance.
      * 
      * @param robot_names Names of the different robots in the swarm.
      * 
@@ -39,14 +41,18 @@ public:
      * @param robot_base_links Map of the base_link frames of the robots,
      *                         keyed by name.
      *
+     * @param robot_radii Map of the robot radii, keyed by name.
+     *
      * @param map_frame The map frame of the whole swarm.
      */
     SwarmPoseEstimator(
         const std::shared_ptr<CloudGenerator>& cloud_gen,
-        std::string map_frame, std::vector<std::string>& robot_names, 
+        const std::shared_ptr<MapManager>& map_man, std::string map_frame, 
+        std::vector<std::string>& robot_names, 
         std::map<std::string, geometry_msgs::Pose>& initial_robot_poses,
         std::map<std::string, std::string>& robot_odom_topics,
-        std::map<std::string, std::string>& robot_base_links);
+        std::map<std::string, std::string>& robot_base_links,
+        std::map<std::string, float>& robot_radii);
     ~SwarmPoseEstimator();
 
     /**

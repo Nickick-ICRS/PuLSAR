@@ -131,7 +131,8 @@ private:
      * @return Distance to the first object hit by the ray.
      */
     double ray_cast(
-        const geometry_msgs::Point& p, double ang, const int8_t *map);
+        const geometry_msgs::Point& p, double ang, 
+        const std::vector<int8_t>& map);
 
     /**
      * @brief Perform a cone casting operation.
@@ -153,7 +154,7 @@ private:
      */
     double cone_cast(
         const geometry_msgs::Point& p, double ang, double spread_ang, 
-        const int8_t *map);
+        const std::vector<int8_t>& map);
 
     /**
      * Gets the tiles occupied by a point and radius on the map.
@@ -186,7 +187,8 @@ private:
     void update_map_with_robot(std::string robot_name);
 
     nav_msgs::OccupancyGridPtr map_;
-    int8_t* map_with_robots_;
+    std::vector<int8_t> map_data_;
+    std::map<std::string, std::vector<int8_t>> maps_with_robots_;
 
     std::map<std::string, geometry_msgs::Pose> robot_poses_;
     std::map<std::string, geometry_msgs::Pose> old_robot_poses_;
@@ -200,6 +202,14 @@ private:
     std::shared_mutex map_mutex_;
 
     bool waiting_for_map_;
+
+    // Variables to speed up ray and cone casting
+    double map_th_;
+    double map_x_;
+    double map_y_;
+    double map_res_;
+    int map_height_;
+    int map_width_;
 };
 
 #endif // __MAP_MANAGER_HPP__

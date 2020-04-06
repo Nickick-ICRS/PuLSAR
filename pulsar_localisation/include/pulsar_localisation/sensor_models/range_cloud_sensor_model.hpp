@@ -25,8 +25,11 @@ public:
      * Constructor for the RangeCloudSensorModel class.
      *
      * @param map_frame The map frame of the robot.
+     *
+     * @param map_man An initialised instance of the map manager class.
      */
-    RangeCloudSensorModel(std::string map_frame);
+    RangeCloudSensorModel(
+        std::string map_frame, const std::shared_ptr<MapManager>& map_man);
     ~RangeCloudSensorModel();
 
     /**
@@ -97,6 +100,8 @@ private:
 
     std::vector<geometry_msgs::PoseWithCovarianceStamped> pose_estimates_;
 
+    std::shared_ptr<MapManager> map_man_;
+
     tf2_ros::Buffer tf_buffer_;
     tf2_ros::TransformListener tf2_;
 
@@ -110,7 +115,6 @@ private:
     static double zmax_;
     static double zrand_;
 
-    static std::shared_ptr<MapManager> map_man_;
     static float history_length_;
     static float time_resolution_;
 

@@ -8,13 +8,14 @@ double RangeCloudSensorModel::zshort_;
 double RangeCloudSensorModel::zmax_;
 double RangeCloudSensorModel::zrand_;
 
-std::shared_ptr<MapManager> RangeCloudSensorModel::map_man_;
 float RangeCloudSensorModel::history_length_;
 float RangeCloudSensorModel::time_resolution_;
 
-RangeCloudSensorModel::RangeCloudSensorModel(std::string map_frame)
+RangeCloudSensorModel::RangeCloudSensorModel(
+    std::string map_frame, const std::shared_ptr<MapManager>& map_man)
+    
     :tf_buffer_(ros::Duration(history_length_)), tf2_(tf_buffer_),
-    map_frame_(map_frame)
+    map_frame_(map_frame), map_man_(map_man)
 {
     // ctor
 }
