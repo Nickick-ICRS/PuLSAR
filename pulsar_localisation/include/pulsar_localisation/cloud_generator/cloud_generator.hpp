@@ -82,6 +82,13 @@ public:
      */
     void clean_cloud(std::string name);
 
+    /**
+     * Get the raw data from the cloud.
+     *
+     * @param robot_name Which robot's data to get.
+     *
+     * @return The data.
+     */
     const std::vector<sensor_msgs::Range>& get_raw_data(
         std::string robot_name) 
     {
@@ -97,6 +104,16 @@ private:
      * @param cloud The point cloud to be updated.
      */
     void clean_cloud(pcl::PointCloud<pcl::PointXYZI>& cloud);
+
+    /**
+     * @brief Updates a single raw data cloud by removing old data.
+     *
+     * Updates a single raw data cloud by removing any data gathered earlier
+     * than the current time - history_length_.
+     *
+     * @param cloud The raw data vector to be updated.
+     */
+    void clean_cloud(std::vector<sensor_msgs::Range>& cloud);
 
     /**
      * Callback for range finder data from one or more PuLSAR robots.

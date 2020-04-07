@@ -11,12 +11,16 @@
         <!-- Map is on the topic '<topic>' -->
         <param name="map_topic" value="map"/>
 
-        <!-- Robot noise parameters. See Probabilistic Robotics by Thrun
-             et al. -->
+        <!-- Robot Odometry noise parameters. See Probabilistic Robotics by
+             Thrun et al. -->
+        <!-- noise in rotation estimate due to rotation -->
         <param name="a1" value="0.0001"/>
-        <param name="a2" value="0.001"/>
-        <param name="a3" value="0.01"/>
-        <param name="a4" value="0.01"/>
+        <!-- noise in rotation estimate due to translation -->
+        <param name="a2" value="0.01"/>
+        <!-- noise in translation estimate due to translation -->
+        <param name="a3" value="0.1"/>
+        <!-- noise in translation estimate due to rotation -->
+        <param name="a4" value="0.001"/>
         <!-- Exponential parameters for augmented MCL, 0 <= aslow < afast.
              See Probabilistic Robotics by Thrun et al. -->
         <param name="aslow" value="0.001"/>
@@ -48,14 +52,16 @@
         <!-- Intrinsic parameters of the range sensors. See Probabilistic
              Robotics by Thrun et al. -->
         <param name="zhit"     value="0.95"/>
-        <param name="zshort"   value="0.1"/>
-        <param name="zmax"     value="0.05"/>
-        <param name="zrand"    value="0.05"/>
+        <param name="zshort"   value="0.05"/>
+        <param name="zmax"     value="0.0005"/>
+        <param name="zrand"    value="0.005"/>
         <param name="sigmahit" value="0.03"/>
-        <param name="lamshort" value="0.1"/>
+        <param name="lamshort" value="0.02"/>
 
         <!-- Constant representing how unreliable old data is considered 
-             to be -->
-        <param name="ztime" value="1.0"/>
+             to be. 1 is 100% unreliable. -->
+        <param name="ztime" value="0.95"/>
+
+        <param name="num_particles" value="100"/>
     </node>
 </launch>

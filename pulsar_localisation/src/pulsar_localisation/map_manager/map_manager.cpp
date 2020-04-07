@@ -45,8 +45,6 @@ void MapManager::map_cb(const nav_msgs::OccupancyGridPtr& msg) {
 bool MapManager::is_pose_valid(
     const geometry_msgs::Pose& pose, float safety_radius)
 {
-    std::shared_lock<std::shared_mutex> lock(map_mutex_);
-
     // First find the point in the occupancy grid that the pose is on
     // Map origin is the bottom left
     double dx = pose.position.x - map_x_;
@@ -61,7 +59,8 @@ bool MapManager::is_pose_valid(
     if(row >= map_height_) return false;
     if(col >= map_width_) return false;
 
-    // Check if the pose is already occupied in the map (i.e. by a wall)
+    std::shared_lock<std::shared_mutex> lock(map_mutex_);
+    // Check that the pose is already occupied in the map (i.e. by a wall)
     const auto& tiles = get_tiles(pose.position, safety_radius);
     for(const auto& t : tiles) {
         if(map_data_[t])
@@ -97,6 +96,46 @@ bool MapManager::is_pose_valid(
     }
 
     return true;
+}
+
+geometry_msgs::Pose MapManager::make_pose_valid(
+        const geometry_msgs::Pose& pose, float safety_radius)
+{
+    if(is_pose_valid(pose, safety_radius))
+        return pose;
+
+    geometry_msgs::Pose ret(pose);
+
+    auto checked_tiles = get_tiles(pose.position, safety_radius);
+    float radius = safety_radius;
+    // Try poses in a slowly increasing radius
+    while(radius < map_width_) {
+        radius += map_res_;
+        auto tiles = get_tiles(pose.position, radius);
+        // Remove tiles already checked
+        for(auto it = tiles.begin(); it != tiles.end(); it++) {
+            bool check = true;
+            for(const auto& t : checked_tiles) {
+                if(*it == t) {
+                    check = false;
+                    break;
+                }
+            }
+            if(check) {
+                int x = *it % map_width_;
+                int y = *it / map_width_;
+                double x2 = ( cos(map_th_)*x + sin(map_th_)*y) * map_res_;
+                double y2 = (-sin(map_th_)*x + cos(map_th_)*y) * map_res_;
+                ret.position.x = x2 + map_x_;
+                ret.position.y = y2 + map_y_;
+                if(is_pose_valid(ret, safety_radius))
+                    return ret;
+            }
+        }
+    }
+    ROS_WARN_STREAM(
+        "Failed to find a valid pose within the map near " << pose);
+    return pose;
 }
 
 void MapManager::set_robot_pose(

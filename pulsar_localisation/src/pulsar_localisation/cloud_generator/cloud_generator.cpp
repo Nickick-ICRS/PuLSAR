@@ -72,8 +72,10 @@ void CloudGenerator::clean_cloud(std::string name) {
             << "' have data stored within the cloud generator.");
         return;
     }
+    std::vector<sensor_msgs::Range>& range = robot_raw_data_[name];
     std::lock_guard<std::recursive_mutex> lock(robot_cloud_muts_[name]);
     clean_cloud(cloud);
+    clean_cloud(range);
 }
 
 void CloudGenerator::clean_cloud(pcl::PointCloud<pcl::PointXYZI>& cloud) {
@@ -90,6 +92,24 @@ void CloudGenerator::clean_cloud(pcl::PointCloud<pcl::PointXYZI>& cloud) {
     // Remove the points which are too old
     for(auto it = cloud.begin(); it != cloud.end(); it++) {
         if(it->intensity < cutoff) {
+            it = --cloud.erase(it);
+        }
+    }
+}
+
+void CloudGenerator::clean_cloud(std::vector<sensor_msgs::Range>& cloud) {
+    // Calculate the cutoff point
+    ros::Time cutoff;
+    try {
+        cutoff = (ros::Time::now() - ros::Duration(history_length_));
+    }
+    catch(std::runtime_error) {
+        // This means that history_length_ seconds have not passed yet
+        return;
+    }
+    // Remove the points which are too old
+    for(auto it = cloud.begin(); it != cloud.end(); it++) {
+        if(it->header.stamp < cutoff) {
             it = --cloud.erase(it);
         }
     }

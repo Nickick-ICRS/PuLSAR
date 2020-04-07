@@ -67,6 +67,18 @@ public:
         float safety_radius = 0);
 
     /**
+     * Makes a pose valid by moving it away from any obstacles in the map.
+     *
+     * @param pose The pose to be made valid.
+     *
+     * @param safety_radius Radius about which to check for collisions.
+     *
+     * @return A valid pose nearby the original pose.
+     */
+    geometry_msgs::Pose make_pose_valid(
+        const geometry_msgs::Pose& pose, float safety_radius = 0);
+
+    /**
      * Updates the position of a robot within the map.
      *
      * @param robot_name The name of the robot who's pose is being updated.

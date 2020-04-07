@@ -87,6 +87,10 @@ private:
      * ******************** */
     // How long range data is kept for
     float history_length_;
+
+    // How many particles are kept in the filter(s) 
+    // see SingleRobotPoseEstimator
+    int particle_filter_size_;
 };
 
 int main(int argc, char **argv) {
@@ -135,7 +139,8 @@ LocalisationNode::LocalisationNode() :running_(true) {
 
     pose_est_.reset(new SwarmPoseEstimator(
         cloud_gen_, map_man_, "map", robot_names, initial_pose_estimates_, 
-        robot_odom_map, robot_base_link_map, robot_radii_map));
+        robot_odom_map, robot_base_link_map, robot_radii_map, 
+        particle_filter_size_));
 
     main_thread_ = std::thread(&LocalisationNode::loop, this);
 }
@@ -145,36 +150,30 @@ LocalisationNode::~LocalisationNode() {
     main_thread_.join();
 }
 
-#include <sensor_msgs/PointCloud.h>
+#include <geometry_msgs/PoseArray.h>
 void LocalisationNode::loop() {
-    ros::Rate sleeper(1.f/5.f);
+    ros::Rate sleeper(5.f);
 
     ros::NodeHandle nh("~");
-    ros::Publisher pub = nh.advertise<sensor_msgs::PointCloud>("test", 1);
+    ros::Publisher pub = nh.advertise<geometry_msgs::PoseArray>("test", 1);
     geometry_msgs::Point p;
-    sensor_msgs::PointCloud c;
+    geometry_msgs::PoseArray c;
     c.header.frame_id = "map";
     std::random_device r;
     std::default_random_engine el(r());
     std::uniform_real_distribution<double> dist(-1, 1);
-    int loop = 0;
     while(running_) {
-        loop++;
         cloud_gen_->clean_all_clouds();
         sleeper.sleep();
 
         cloud_gen_->publish_cloud("pulsar_0");
 
         auto& pt = pose_est_->robot_pose_estimators_["pulsar_0"]->get_pose_estimate();
-        ROS_INFO_STREAM(pt);
+        ROS_INFO_STREAM(pt.pose);
         auto& pts = pose_est_->robot_pose_estimators_["pulsar_0"]->get_pose_estimates();
-        c.points.clear();
+        c.poses.clear();
         for(auto& pose : pts) {
-            geometry_msgs::Point32 p;
-            p.x = pose.position.x;
-            p.y = pose.position.y;
-            p.z = pose.position.z;
-            c.points.push_back(p);
+            c.poses.push_back(pose);
         }
         c.header.stamp = ros::Time::now();
         pub.publish(c);
@@ -455,5 +454,13 @@ void LocalisationNode::get_ros_parameters() {
         ROS_WARN_STREAM(
             "Failed to get param zrand. Defaulting to '"
             << RangeCloudSensorModel::zrand_ << "'.");
+    }
+
+    if(!ros::param::param<int>(
+        "~num_particles", particle_filter_size_, 50))
+    {
+        ROS_WARN_STREAM(
+            "Failed to get param num_particles. Defaulting to '"
+            << particle_filter_size_ << "'.");
     }
 }

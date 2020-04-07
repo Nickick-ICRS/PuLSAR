@@ -8,7 +8,10 @@
 #include <ros/ros.h>
 #include <geometry_msgs/Pose.h>
 #include <geometry_msgs/PoseWithCovarianceStamped.h>
+#include <geometry_msgs/TransformStamped.h>
 #include <nav_msgs/Odometry.h>
+#include <tf2_ros/transform_listener.h>
+#include <tf2_ros/transform_broadcaster.h>
 
 #include "cloud_generator/cloud_generator.hpp"
 #include "sensor_models/range_cloud_sensor_model.hpp"
@@ -42,12 +45,14 @@ public:
      * @param base_link_frame The name of the base_link frame of the robot.
      *
      * @param radius Approximate radius of the robot footprint.
+     *
+     * @param M Number of particles to include in the filter.
      */
     SingleRobotPoseEstimator(
         std::string name, const std::shared_ptr<CloudGenerator>& cloud_gen,
         const std::shared_ptr<MapManager>& map_man, std::string map_frame, 
         geometry_msgs::Pose initial_pose, std::string odom_topic,
-        std::string base_link_frame, float radius);
+        std::string base_link_frame, float radius, unsigned int M);
     ~SingleRobotPoseEstimator();
     
     /**
@@ -154,14 +159,15 @@ private:
      * Sample from p(xt | ut, xt-1) given odometry information. See 
      * Probabilistic Robotics by Thrun et al.
      *
-     * @param ut The most recent odometry measurement.
+     * @param ut The most recent odometry measurement, transformed into the
+     *           map frame (to account for estimated deviances).
      *
      * @param xt_1 The most recent pose estimate.
      *
      * @return The current (new) pose estimate.
      */
     geometry_msgs::Pose sample_motion_model_odometry(
-        const nav_msgs::Odometry& ut,
+        const geometry_msgs::Pose& ut,
         const geometry_msgs::Pose& xt_1);
 
     /**
@@ -172,8 +178,26 @@ private:
      */
     void update_pose_estimate_with_covariance();
 
+    /**
+     * @brief Calculates the transform from the odom frame to the map frame.
+     *
+     * As we are estimating from the base_link frame to the map frame,
+     * using odometry information, our pose estimate is map->base_link.
+     * However, we need to publish map->odom, which is what this function
+     * calculates.
+     *
+     * @param odom The most recent odometry message that the filter was 
+     *             updated with.
+     * 
+     * @return The transform from the map frame to the frame of the odometry
+     *         message (odom).
+     */
+    geometry_msgs::TransformStamped calculate_transform(
+        const nav_msgs::Odometry& odom);
+
     std::string name_;
     std::string base_link_frame_;
+    std::string map_frame_;
     float radius_;
 
     const std::shared_ptr<CloudGenerator> cloud_gen_;
@@ -188,6 +212,9 @@ private:
 
     ros::NodeHandle nh_;
     ros::Subscriber odom_sub_;
+    tf2_ros::Buffer tf2_;
+    tf2_ros::TransformListener tf_listener_;
+    tf2_ros::TransformBroadcaster tf_broadcaster_;
 
     std::random_device rd_;
     std::mt19937_64 gen_;

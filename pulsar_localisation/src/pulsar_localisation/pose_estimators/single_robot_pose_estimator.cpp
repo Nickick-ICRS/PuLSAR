@@ -2,6 +2,11 @@
 
 #include <cmath>
 
+#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
+#include <tf2/LinearMath/Vector3.h>
+#include <tf2/LinearMath/Quaternion.h>
+#include <tf2/LinearMath/Transform.h>
+
 double SingleRobotPoseEstimator::a1_,
        SingleRobotPoseEstimator::a2_,
        SingleRobotPoseEstimator::a3_,
@@ -13,11 +18,11 @@ SingleRobotPoseEstimator::SingleRobotPoseEstimator(
     std::string name, const std::shared_ptr<CloudGenerator>& cloud_gen,
     const std::shared_ptr<MapManager>& map_man, std::string map_frame, 
     geometry_msgs::Pose initial_pose, std::string odom_topic,
-    std::string base_link_frame, float radius)
+    std::string base_link_frame, float radius, unsigned int M)
     
     :name_(name), cloud_gen_(cloud_gen), map_man_(map_man), rd_(), 
-    gen_(rd_()), range_model_(map_frame, map_man), 
-    base_link_frame_(base_link_frame), radius_(radius)
+    gen_(rd_()), range_model_(map_frame, map_man), map_frame_(map_frame),
+    base_link_frame_(base_link_frame), radius_(radius), tf_listener_(tf2_)
 {
     pose_estimate_.pose.pose = initial_pose;
     pose_estimate_.header.frame_id = map_frame;
@@ -32,8 +37,7 @@ SingleRobotPoseEstimator::SingleRobotPoseEstimator(
     odom_sub_ = nh_.subscribe(
         odom_topic, 1, &SingleRobotPoseEstimator::odom_cb, this);
 
-    // TODO: Generate poses with a distribution about initial_pose
-    for(int i = 0; i < 1000; i++) {
+    for(int i = 0; i < M; i++) {
         geometry_msgs::Pose p = gen_random_valid_pose(pose_estimate_.pose);
         pose_estimate_cloud_.push_back(p);
     }
@@ -50,6 +54,8 @@ void SingleRobotPoseEstimator::update_estimate() {
         std::lock_guard<std::mutex> lock(odom_mut_);
         odom = recent_odom_;
     }
+    // Clean any old data points
+    cloud_gen_->clean_cloud(name_);
     // Run an iteration of the augmented MCL filter
     auto new_cloud = augmented_MCL(pose_estimate_cloud_, odom);
     pose_estimate_cloud_ = new_cloud;
@@ -57,6 +63,9 @@ void SingleRobotPoseEstimator::update_estimate() {
     // Find the mean and covariance of the cloud and store in the overall 
     // pose estimate
     update_pose_estimate_with_covariance();
+
+    auto tf = calculate_transform(odom);
+    //tf_broadcaster_.sendTransform(tf);
 }
 
 void SingleRobotPoseEstimator::update_pose_estimate_with_covariance() {
@@ -132,13 +141,13 @@ double SingleRobotPoseEstimator::sample_normal_distribution(double b2) {
 }
 
 geometry_msgs::Pose SingleRobotPoseEstimator::sample_motion_model_odometry(
-    const nav_msgs::Odometry& ut, const geometry_msgs::Pose& xt_1)
+    const geometry_msgs::Pose& ut, const geometry_msgs::Pose& xt_1)
 {
-    double drot1 = atan2(ut.pose.pose.position.y - xt_1.position.y,
-                        ut.pose.pose.position.x - xt_1.position.x);
-    double dtrans = sqrt(pow(xt_1.position.x - ut.pose.pose.position.x, 2) +
-                         pow(xt_1.position.y - ut.pose.pose.position.y, 2));
-    double tht = 2*acos(ut.pose.pose.orientation.w);
+    double drot1 = atan2(ut.position.y - xt_1.position.y,
+                        ut.position.x - xt_1.position.x);
+    double dtrans = sqrt(pow(xt_1.position.x - ut.position.x, 2) +
+                         pow(xt_1.position.y - ut.position.y, 2));
+    double tht = 2*acos(ut.orientation.w);
     double tht_1 = 2*acos(xt_1.orientation.w);
     double drot2 = tht - tht_1 - drot1;
 
@@ -182,9 +191,31 @@ std::vector<geometry_msgs::Pose>
     float wavg = 0;
     int M = Xt_1.size();
 
+    // Transform the odometry message into the most recent map frame
+    // estimate
+    geometry_msgs::Pose ut_map;
+    try {
+        auto trans = tf2_.lookupTransform(
+            map_frame_, ut.header.frame_id, ros::Time(0));
+        tf2::doTransform(ut.pose.pose, ut_map, trans);
+    }
+    catch(const tf2::LookupException& ex) {
+        // Transform doesn't exist yet, so assume 0
+        ROS_WARN_STREAM(
+            "SingleRobotPoseEstimator caught '" << ex.what()
+            << "' in function augmented_MCL");
+        ut_map = ut.pose.pose;
+    }
+    catch(const tf2::TransformException& ex) {
+        ROS_WARN_STREAM(
+            "SingleRobotPoseEstimator caught '" << ex.what()
+            << "' in function augmented_MCL");
+        ut_map = ut.pose.pose;
+    }
+
     for(int m = 0; m < M; m++) {
         // Update the motion model
-        xt.push_back(sample_motion_model_odometry(ut, Xt_1[m]));
+        xt.push_back(sample_motion_model_odometry(ut_map, Xt_1[m]));
         // Update the measurement model
         wt.push_back(range_model_.model(
             xt[m], cloud_gen_->get_raw_data(name_), name_, 
@@ -203,7 +234,9 @@ std::vector<geometry_msgs::Pose>
         float p = 1.0 - wfast/wslow;
         if(p < 0) p = 0;
         if(dist(gen_) < p) {
-            // Add a random pose to Xt
+            // Add a random pose to Xt - not distributed about our current
+            // estimate as this is to try and ensure we don't hit local
+            // minima
             Xt.push_back(gen_random_valid_pose());
         }
         else {
@@ -213,7 +246,8 @@ std::vector<geometry_msgs::Pose>
             for(const auto& pair : Xtbar) {
                 p -= pair.second;
                 if(p <= 0) {
-                    Xt.emplace_back(pair.first);
+                    Xt.emplace_back(map_man_->make_pose_valid(
+                        pair.first, radius_));
                     break;
                 }
             }
@@ -255,4 +289,52 @@ geometry_msgs::Pose SingleRobotPoseEstimator::gen_random_valid_pose(
     while(!map_man_->is_pose_valid(pose, radius_));
 
     return pose;
+}
+
+geometry_msgs::TransformStamped 
+    SingleRobotPoseEstimator::calculate_transform(
+        const nav_msgs::Odometry& odom)
+{
+    // Get the transform matrix for the odometry
+    tf2::Vector3 vec(
+        odom.pose.pose.position.x, odom.pose.pose.position.y,
+        odom.pose.pose.position.z);
+
+    tf2::Quaternion quat(
+        odom.pose.pose.orientation.x, odom.pose.pose.orientation.y,
+        odom.pose.pose.orientation.z, odom.pose.pose.orientation.w);
+
+    tf2::Transform oCb(quat, vec);
+
+    // Get the transform matrix for the pose estimate
+    vec = tf2::Vector3(
+        pose_estimate_.pose.pose.position.x,
+        pose_estimate_.pose.pose.position.y,
+        pose_estimate_.pose.pose.position.z);
+    
+    quat = tf2::Quaternion(
+        pose_estimate_.pose.pose.orientation.x, 
+        pose_estimate_.pose.pose.orientation.y,
+        pose_estimate_.pose.pose.orientation.z,
+        pose_estimate_.pose.pose.orientation.w);
+
+    tf2::Transform mCb(quat, vec);
+
+    // Calculate the transform matrix for map to odom
+    tf2::Transform mCo = mCb * oCb.inverse();
+
+    // Create the message and return
+    geometry_msgs::TransformStamped tf;
+    tf.header.stamp = ros::Time::now();
+    tf.header.frame_id = map_frame_;
+    tf.child_frame_id = odom.header.frame_id;
+    tf.transform.translation.x = mCb.getOrigin().x();
+    tf.transform.translation.y = mCb.getOrigin().y();
+    tf.transform.translation.z = mCb.getOrigin().z();
+    tf.transform.rotation.x = mCb.getRotation().x();
+    tf.transform.rotation.y = mCb.getRotation().y();
+    tf.transform.rotation.z = mCb.getRotation().z();
+    tf.transform.rotation.w = mCb.getRotation().w();
+
+    return tf;
 }

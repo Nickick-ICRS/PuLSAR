@@ -7,7 +7,7 @@ SwarmPoseEstimator::SwarmPoseEstimator(
     std::map<std::string, geometry_msgs::Pose>& initial_robot_poses,
     std::map<std::string, std::string>& robot_odom_topics,
     std::map<std::string, std::string>& robot_base_links,
-    std::map<std::string, float>& robot_radii) 
+    std::map<std::string, float>& robot_radii, unsigned int M) 
 
     :cloud_gen_(cloud_gen), map_frame_(map_frame)
 {
@@ -15,7 +15,7 @@ SwarmPoseEstimator::SwarmPoseEstimator(
         robot_pose_estimators_[name].reset(new SingleRobotPoseEstimator(
             name, cloud_gen, map_man, map_frame, initial_robot_poses[name],
             robot_odom_topics[name], robot_base_links[name], 
-            robot_radii[name]));
+            robot_radii[name], M));
         robot_pose_estimates_[name] = 
             robot_pose_estimators_[name]->get_pose_estimate();
     }

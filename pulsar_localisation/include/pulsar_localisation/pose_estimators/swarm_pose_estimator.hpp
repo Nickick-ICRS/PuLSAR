@@ -44,6 +44,9 @@ public:
      * @param robot_radii Map of the robot radii, keyed by name.
      *
      * @param map_frame The map frame of the whole swarm.
+     *
+     * @param M The number of particles to include in the single robot
+     *          pose estimator particle filters.
      */
     SwarmPoseEstimator(
         const std::shared_ptr<CloudGenerator>& cloud_gen,
@@ -52,7 +55,7 @@ public:
         std::map<std::string, geometry_msgs::Pose>& initial_robot_poses,
         std::map<std::string, std::string>& robot_odom_topics,
         std::map<std::string, std::string>& robot_base_links,
-        std::map<std::string, float>& robot_radii);
+        std::map<std::string, float>& robot_radii, unsigned int M);
     ~SwarmPoseEstimator();
 
     /**
