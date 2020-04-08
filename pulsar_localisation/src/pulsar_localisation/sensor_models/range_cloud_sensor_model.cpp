@@ -123,7 +123,7 @@ float RangeCloudSensorModel::model(
             pt.point.x = pt.point.x * cos(th) - pt.point.y * sin(th);
             pt.point.y = pt.point.x * sin(th) + pt.point.y * cos(th);
             pt.header.frame_id = map_frame_;
-            in_past = false;
+            //in_past = false;
         }
 
         // Compute the ideal measurement via raycasting
@@ -144,30 +144,41 @@ float RangeCloudSensorModel::model(
         if(in_past) {
             ideal_z = map_man_->cone_cast_plain_map(
                 pt.point, ang, z.field_of_view);
+            ROS_WARN_STREAM("no bots ideal_z: " << ideal_z);
+            ROS_WARN_STREAM("pt: " << pt.point << "\nz: " << z);
         }
         // Otherwise we can consider positions of other robots within
         // the swarm
         else {
             ideal_z = map_man_->cone_cast_with_bots(
                 pt.point, ang, z.field_of_view, robot_name);
+            ROS_WARN_STREAM("bots ideal_z: " << ideal_z);
         }
         // Now process how likely the point is based on how far it is from
         // an occupied area on the map
         float prob = zhit_*phit(z, ideal_z) + zshort_*pshort(z, ideal_z)
                    + zmax_*pmax(z) + zrand_*prand(z);
         prob /= zhit_+zshort_+zmax_+zrand_;
+        ROS_INFO_STREAM("prob: " << prob << " phit: " << phit(z, ideal_z)
+            << " pshort " << pshort(z, ideal_z) << " pmax " << pmax(z)
+            << " prand " << prand(z));
 
         // Older points are less reliable, so increase the probability of
         // them being 'correct' such that they have less of a negative
         // effect on the overall probability
         auto dur = now - z.header.stamp;
         double frac = (dur.sec + dur.nsec / 1e9) / history_length_;
-        prob = ztime_ * frac + (1-ztime_) * prob;
+        if(z.header.stamp >= now - ros::Duration(0.2))
+            frac = 0;
+        frac = exp(-ztime_ * frac);
+        prob = 1 - frac + frac * prob;
+
+        ROS_INFO_STREAM("T: " << dur << " f: " << frac << " p: " << prob);
 
         // Update the total probability
         q *= prob;
     }
-    return 1.0;
+    return q;
 }
 
 float RangeCloudSensorModel::phit(
@@ -175,30 +186,32 @@ float RangeCloudSensorModel::phit(
 {
     if(z.range > z.max_range || z.range < z.min_range) return 0;
     // Helper lambda
-    static auto N = [this](double z, double ideal_z, double sigmahit) {
-        double a = 1/sqrt(2*M_PI*sigmahit);
-        double b = exp(-0.5*pow(z-ideal_z, 2)/sigmahit);
+    static auto N = [this](double z, double ideal_z, double sigmahit2) {
+        double a = 1/sqrt(2*M_PI*sigmahit2);
+        double b = exp(-0.5*pow(z-ideal_z, 2)/sigmahit2);
         return a*b;
     };
     
     // Simpson's rule in a helper lambda
     static auto integral = [this](
-        const sensor_msgs::Range& z, double ideal_z, double sigmahit)
+        const sensor_msgs::Range& z, double ideal_z, double sigmahit2)
     {
-        const int NUM_DIVISIONS = 2*10;
+        const int NUM_DIVISIONS = 2*200;
         double delta = z.max_range / (double)NUM_DIVISIONS;
         double area = 0;
         for(double zi = 0; zi < z.max_range; zi += 2 * delta) {
-            area += N(zi, ideal_z, sigmahit)
-                 + 4 * N(zi+delta, ideal_z, sigmahit)
-                 + N(zi+2*delta, ideal_z, sigmahit);
+            area += N(zi, ideal_z, sigmahit2)
+                 + 4 * N(zi+delta, ideal_z, sigmahit2)
+                 + N(zi+2*delta, ideal_z, sigmahit2);
         }
         area *= delta/3;
         return area;
     };
 
-    double eta = 1/integral(z, ideal_z, sigmahit_);
-    return eta * N(z.range, ideal_z, sigmahit_);
+    double eta = 1/integral(z, ideal_z, pow(sigmahit_, 2));
+    double x = eta * N(z.range, ideal_z, pow(sigmahit_, 2));
+    ROS_INFO_STREAM("phit: " << x << " z: " << z.range << " iz: " << ideal_z);
+    return x;
 }
 
 float RangeCloudSensorModel::pshort(

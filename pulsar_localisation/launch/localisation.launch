@@ -58,9 +58,9 @@
         <param name="sigmahit" value="0.03"/>
         <param name="lamshort" value="0.02"/>
 
-        <!-- Constant representing how unreliable old data is considered 
-             to be. 1 is 100% unreliable. -->
-        <param name="ztime" value="0.95"/>
+        <!-- Exponential parameter representing how unreliable old data is 
+             considered to be. >= 0, larger = more unreliable-->
+        <param name="ztime" value="10"/>
 
         <param name="num_particles" value="100"/>
     </node>

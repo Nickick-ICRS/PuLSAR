@@ -37,10 +37,14 @@ SingleRobotPoseEstimator::SingleRobotPoseEstimator(
     odom_sub_ = nh_.subscribe(
         odom_topic, 1, &SingleRobotPoseEstimator::odom_cb, this);
 
-    for(int i = 0; i < M; i++) {
+    for(int i = 0; i < 2/*M*/; i++) {
         geometry_msgs::Pose p = gen_random_valid_pose(pose_estimate_.pose);
         pose_estimate_cloud_.push_back(p);
     }
+    pose_estimate_cloud_[0].position.x = 0;
+    pose_estimate_cloud_[0].position.y = 0;
+    pose_estimate_cloud_[0].orientation.z = 0;
+    pose_estimate_cloud_[0].orientation.w = 1;
 }
 
 SingleRobotPoseEstimator::~SingleRobotPoseEstimator() {
@@ -65,7 +69,7 @@ void SingleRobotPoseEstimator::update_estimate() {
     update_pose_estimate_with_covariance();
 
     auto tf = calculate_transform(odom);
-    //tf_broadcaster_.sendTransform(tf);
+    tf_broadcaster_.sendTransform(tf);
 }
 
 void SingleRobotPoseEstimator::update_pose_estimate_with_covariance() {
@@ -223,10 +227,13 @@ std::vector<geometry_msgs::Pose>
         wavg += wt[m]/M;
         // Update the cloud + weights
         Xtbar.emplace_back(xt[m], wt[m]);
+        ROS_ERROR_STREAM("\nx: " << xt.back().position.x << " y: " << xt.back().position.y << " yaw: " << 180*2*acos(xt.back().orientation.w)/M_PI << " w: " << wt.back());
     }
 
     wslow = wslow + aslow_ * (wavg - wslow);
     wfast = wfast + afast_ * (wavg - wfast);
+
+    ROS_INFO_STREAM("wavg " << wavg << " wslow " << wslow << " wfast " << wfast);
 
     std::uniform_real_distribution<double> dist(0, 1);
     float wtotal = wavg*M;

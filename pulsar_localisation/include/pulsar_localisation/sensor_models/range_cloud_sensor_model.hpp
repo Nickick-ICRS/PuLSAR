@@ -38,6 +38,8 @@ public:
      * Adds a pose estimate to the history of the model, allowing it to
      * account for robot movement over the course of measurements.
      *
+     * N.B. Currently unused.
+     *
      * @param pose The pose estimate.
      */
     void add_pose_estimate(

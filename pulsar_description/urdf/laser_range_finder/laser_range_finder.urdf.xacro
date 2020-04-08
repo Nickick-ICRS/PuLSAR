@@ -61,7 +61,7 @@
                 <updateRate>${update_rate}</updateRate>
                 <topicName>${name}/range</topicName>
                 <frameName>$(arg robot_ns)/${name}_link</frameName>
-                <fov>0.5</fov>
+                <fov>${cone_angle}</fov>
                 <radiation>infrared</radiation>
             </plugin>
         </sensor>
