@@ -1,5 +1,7 @@
 #include "pose_estimators/single_robot_pose_estimator.hpp"
 
+#include "maths/useful_functions.hpp"
+
 #include <cmath>
 
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
@@ -37,14 +39,10 @@ SingleRobotPoseEstimator::SingleRobotPoseEstimator(
     odom_sub_ = nh_.subscribe(
         odom_topic, 1, &SingleRobotPoseEstimator::odom_cb, this);
 
-    for(int i = 0; i < 2/*M*/; i++) {
+    for(int i = 0; i < M; i++) {
         geometry_msgs::Pose p = gen_random_valid_pose(pose_estimate_.pose);
         pose_estimate_cloud_.push_back(p);
     }
-    pose_estimate_cloud_[0].position.x = 0;
-    pose_estimate_cloud_[0].position.y = 0;
-    pose_estimate_cloud_[0].orientation.z = 0;
-    pose_estimate_cloud_[0].orientation.w = 1;
 }
 
 SingleRobotPoseEstimator::~SingleRobotPoseEstimator() {
@@ -81,7 +79,7 @@ void SingleRobotPoseEstimator::update_pose_estimate_with_covariance() {
         avg_point.x += pose.position.x;
         avg_point.y += pose.position.y;
         avg_point.z += pose.position.z;
-        avg_yaw += 2*acos(pose.orientation.w);
+        avg_yaw += quat_to_yaw(pose.orientation);
     }
     double n = pose_estimate_cloud_.size();
     avg_point.x /= n;
@@ -105,7 +103,7 @@ void SingleRobotPoseEstimator::update_pose_estimate_with_covariance() {
     // Sample covariance so reduce n by 1
     n -= 1;
     for(const auto& pose : pose_estimate_cloud_) {
-        double yaw_diff = ang_diff(2*acos(pose.orientation.w), avg_yaw);
+        double yaw_diff = ang_diff(quat_to_yaw(pose.orientation), avg_yaw);
         cov_mat[0]  += pow(pose.position.x - avg_point.x, 2) / n;
         cov_mat[1]  += (pose.position.x - avg_point.x) 
                      * (pose.position.y - avg_point.y) / n;
@@ -122,8 +120,7 @@ void SingleRobotPoseEstimator::update_pose_estimate_with_covariance() {
 
     pose_estimate_.header.stamp = ros::Time::now();
     pose_estimate_.pose.pose.position = avg_point;
-    pose_estimate_.pose.pose.orientation.w = cos(avg_yaw/2);
-    pose_estimate_.pose.pose.orientation.z = sin(avg_yaw/2);
+    pose_estimate_.pose.pose.orientation = yaw_to_quat(avg_yaw);
 }
 
 void SingleRobotPoseEstimator::odom_cb(
@@ -147,12 +144,12 @@ double SingleRobotPoseEstimator::sample_normal_distribution(double b2) {
 geometry_msgs::Pose SingleRobotPoseEstimator::sample_motion_model_odometry(
     const geometry_msgs::Pose& ut, const geometry_msgs::Pose& xt_1)
 {
+    double tht = quat_to_yaw(ut.orientation);
+    double tht_1 = quat_to_yaw(xt_1.orientation);
     double drot1 = atan2(ut.position.y - xt_1.position.y,
-                        ut.position.x - xt_1.position.x);
+                        ut.position.x - xt_1.position.x) - tht;
     double dtrans = sqrt(pow(xt_1.position.x - ut.position.x, 2) +
                          pow(xt_1.position.y - ut.position.y, 2));
-    double tht = 2*acos(ut.orientation.w);
-    double tht_1 = 2*acos(xt_1.orientation.w);
     double drot2 = tht - tht_1 - drot1;
 
     double sdrot1 = drot1 - sample_normal_distribution(
@@ -227,7 +224,7 @@ std::vector<geometry_msgs::Pose>
         wavg += wt[m]/M;
         // Update the cloud + weights
         Xtbar.emplace_back(xt[m], wt[m]);
-        ROS_ERROR_STREAM("\nx: " << xt.back().position.x << " y: " << xt.back().position.y << " yaw: " << 180*2*acos(xt.back().orientation.w)/M_PI << " w: " << wt.back());
+        ROS_ERROR_STREAM("\nx: " << xt.back().position.x << " y: " << xt.back().position.y << " yaw: " << 180*quat_to_yaw(xt.back().orientation)/M_PI << " w: " << wt.back());
     }
 
     wslow = wslow + aslow_ * (wavg - wslow);
@@ -273,8 +270,7 @@ geometry_msgs::Pose SingleRobotPoseEstimator::gen_random_valid_pose() {
         pose.position.x = xdist(gen_);
         pose.position.y = ydist(gen_);
         double th = thdist(gen_);
-        pose.orientation.z = sin(th/2);
-        pose.orientation.w = cos(th/2);
+        pose.orientation = yaw_to_quat(th);
     }
     while(!map_man_->is_pose_valid(pose, radius_));
 
@@ -285,13 +281,14 @@ geometry_msgs::Pose SingleRobotPoseEstimator::gen_random_valid_pose(
     const geometry_msgs::PoseWithCovariance& p) 
 {
     geometry_msgs::Pose pose = p.pose;
-    double th = 2*acos(pose.orientation.w);
+    double th = quat_to_yaw(pose.orientation);
+    int i = 0;
     do {
         pose.position.x += sample_normal_distribution(p.covariance[0]);
         pose.position.y += sample_normal_distribution(p.covariance[7]);
         th += sample_normal_distribution(p.covariance[35]);
-        pose.orientation.z = sin(th/2);
-        pose.orientation.w = cos(th/2);
+        pose.orientation = yaw_to_quat(th);
+        i++;
     }
     while(!map_man_->is_pose_valid(pose, radius_));
 

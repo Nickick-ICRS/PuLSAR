@@ -1,8 +1,6 @@
 #ifndef __RANGE_CLOUD_SENSOR_MODEL_HPP__
 #define __RANGE_CLOUD_SENSOR_MODEL_HPP__
 
-#include <cmath>
-
 #include <geometry_msgs/Pose.h>
 #include <geometry_msgs/PoseWithCovarianceStamped.h>
 #include <sensor_msgs/Range.h>

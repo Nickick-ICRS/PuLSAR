@@ -14,7 +14,7 @@
         <!-- Robot Odometry noise parameters. See Probabilistic Robotics by
              Thrun et al. -->
         <!-- noise in rotation estimate due to rotation -->
-        <param name="a1" value="0.0001"/>
+        <param name="a1" value="0.00001"/>
         <!-- noise in rotation estimate due to translation -->
         <param name="a2" value="0.01"/>
         <!-- noise in translation estimate due to translation -->
@@ -60,8 +60,9 @@
 
         <!-- Exponential parameter representing how unreliable old data is 
              considered to be. >= 0, larger = more unreliable-->
-        <param name="ztime" value="10"/>
+        <param name="ztime" value="5"/>
 
-        <param name="num_particles" value="100"/>
+        <!-- Number of particles to be included in the MCL filter -->
+        <param name="num_particles" value="200"/>
     </node>
 </launch>

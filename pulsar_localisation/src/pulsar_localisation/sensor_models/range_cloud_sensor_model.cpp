@@ -1,5 +1,9 @@
 #include "sensor_models/range_cloud_sensor_model.hpp"
 
+#include "maths/useful_functions.hpp"
+
+#include <cmath>
+
 double RangeCloudSensorModel::lamshort_;
 double RangeCloudSensorModel::sigmahit_;
 double RangeCloudSensorModel::ztime_;
@@ -78,15 +82,14 @@ float RangeCloudSensorModel::model(
         // Why ???
         if(z.header.frame_id == "")
             continue;
-        // Transform the point into the estimated pose coordinate frame, for
-        // the closest pose in the history
+        // Transform the sensor pose into the estimated pose coordinate 
+        // frame, for the closest pose in the history
         geometry_msgs::PointStamped pt2;
         geometry_msgs::PointStamped pt;
         pt2.header.frame_id = z.header.frame_id;
         pt2.header.stamp = z.header.stamp;
-        pt2.point.x = z.range;
 
-        // Flag to say whether this point is relative to the new pose
+        // Flag to say whether this pose is relative to the new pose
         // estimate, or an older one in the past
         bool in_past = true;
         
@@ -119,7 +122,7 @@ float RangeCloudSensorModel::model(
             pt.point.x += p.position.x;
             pt.point.y += p.position.y;
             pt.point.z += p.position.z;
-            double th = 2*acos(p.orientation.w);
+            double th = quat_to_yaw(p.orientation);
             pt.point.x = pt.point.x * cos(th) - pt.point.y * sin(th);
             pt.point.y = pt.point.x * sin(th) + pt.point.y * cos(th);
             pt.header.frame_id = map_frame_;
@@ -134,8 +137,8 @@ float RangeCloudSensorModel::model(
         try {
             const auto trans = tf_buffer_.lookupTransform(
                 base_link_frame, z.header.frame_id, ros::Time(0));
-            ang = 2*acos(trans.transform.rotation.w) 
-                + 2*acos(p.orientation.w);
+            ang = quat_to_yaw(trans.transform.rotation) 
+                + quat_to_yaw(p.orientation);
         }
         catch(tf2::TransformException& ex) {
             ROS_WARN_STREAM(ex.what());
@@ -144,24 +147,21 @@ float RangeCloudSensorModel::model(
         if(in_past) {
             ideal_z = map_man_->cone_cast_plain_map(
                 pt.point, ang, z.field_of_view);
-            ROS_WARN_STREAM("no bots ideal_z: " << ideal_z);
-            ROS_WARN_STREAM("pt: " << pt.point << "\nz: " << z);
         }
         // Otherwise we can consider positions of other robots within
         // the swarm
         else {
             ideal_z = map_man_->cone_cast_with_bots(
                 pt.point, ang, z.field_of_view, robot_name);
-            ROS_WARN_STREAM("bots ideal_z: " << ideal_z);
         }
         // Now process how likely the point is based on how far it is from
         // an occupied area on the map
         float prob = zhit_*phit(z, ideal_z) + zshort_*pshort(z, ideal_z)
                    + zmax_*pmax(z) + zrand_*prand(z);
         prob /= zhit_+zshort_+zmax_+zrand_;
-        ROS_INFO_STREAM("prob: " << prob << " phit: " << phit(z, ideal_z)
+/*        ROS_INFO_STREAM("prob: " << prob << " phit: " << phit(z, ideal_z)
             << " pshort " << pshort(z, ideal_z) << " pmax " << pmax(z)
-            << " prand " << prand(z));
+            << " prand " << prand(z));*/
 
         // Older points are less reliable, so increase the probability of
         // them being 'correct' such that they have less of a negative
@@ -173,10 +173,14 @@ float RangeCloudSensorModel::model(
         frac = exp(-ztime_ * frac);
         prob = 1 - frac + frac * prob;
 
-        ROS_INFO_STREAM("T: " << dur << " f: " << frac << " p: " << prob);
+//        ROS_INFO_STREAM("T: " << dur << " f: " << frac << " p: " << prob);
 
         // Update the total probability
         q *= prob;
+    }
+    if(q > 1) {
+        ROS_WARN_STREAM("q > 1: " << q);
+        q = 1;
     }
     return q;
 }
@@ -209,9 +213,7 @@ float RangeCloudSensorModel::phit(
     };
 
     double eta = 1/integral(z, ideal_z, pow(sigmahit_, 2));
-    double x = eta * N(z.range, ideal_z, pow(sigmahit_, 2));
-    ROS_INFO_STREAM("phit: " << x << " z: " << z.range << " iz: " << ideal_z);
-    return x;
+    return eta * N(z.range, ideal_z, pow(sigmahit_, 2));
 }
 
 float RangeCloudSensorModel::pshort(

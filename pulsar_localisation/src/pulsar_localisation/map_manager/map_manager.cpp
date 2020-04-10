@@ -1,7 +1,10 @@
 #include "map_manager/map_manager.hpp"
 
+#include "maths/useful_functions.hpp"
+
 #include <chrono> // For std::chrono::milliseconds
 #include <mutex> // For std::unique_lock
+#include <cmath>
 
 MapManager::MapManager(std::string map_topic) 
     :map_(new nav_msgs::OccupancyGrid)
@@ -10,7 +13,6 @@ MapManager::MapManager(std::string map_topic)
 
     // Block until the map comes online
     waiting_for_map_ = true;
-    ROS_ERROR("1");
     while(waiting_for_map_) {
         ros::spinOnce();
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
@@ -18,7 +20,6 @@ MapManager::MapManager(std::string map_topic)
             5, "No map received from '" << map_topic 
             << "' yet. Will continue waiting...");
     }
-    ROS_ERROR("2");
 }
 
 MapManager::~MapManager() {
@@ -33,7 +34,7 @@ void MapManager::map_cb(const nav_msgs::OccupancyGridPtr& msg) {
     map_data_ = msg->data;
 
     update_map_with_robots();
-    map_th_ = 2*acos(msg->info.origin.orientation.w);
+    map_th_ = quat_to_yaw(msg->info.origin.orientation);
     map_x_ = msg->info.origin.position.x;
     map_y_ = msg->info.origin.position.y;
     map_res_ = msg->info.resolution;
@@ -50,8 +51,8 @@ bool MapManager::is_pose_valid(
     double dx = pose.position.x - map_x_;
     double dy = pose.position.y - map_y_;
 
-    int row = (cos(map_th_) * dx - sin(map_th_) * dy) / map_res_ + 0.5;
-    int col = (sin(map_th_) * dx + cos(map_th_) * dy) / map_res_ + 0.5;
+    int row = ( cos(map_th_) * dx + sin(map_th_) * dy) / map_res_ + 0.5;
+    int col = (-sin(map_th_) * dx + cos(map_th_) * dy) / map_res_ + 0.5;
 
     // Check that the pose is within the map boundaries
     if(row < 0) return false;
@@ -79,8 +80,8 @@ bool MapManager::is_pose_valid(
     double dx = pose.position.x - map_x_;
     double dy = pose.position.y - map_y_;
 
-    int row = (cos(map_th_) * dx - sin(map_th_) * dy) / map_res_ + 0.5;
-    int col = (sin(map_th_) * dx + cos(map_th_) * dy) / map_res_ + 0.5;
+    int row = ( cos(map_th_) * dx + sin(map_th_) * dy) / map_res_ + 0.5;
+    int col = (-sin(map_th_) * dx + cos(map_th_) * dy) / map_res_ + 0.5;
 
     // Check that the pose is within the map boundaries
     if(row < 0) return false;
@@ -124,8 +125,8 @@ geometry_msgs::Pose MapManager::make_pose_valid(
             if(check) {
                 int x = *it % map_width_;
                 int y = *it / map_width_;
-                double x2 = ( cos(map_th_)*x + sin(map_th_)*y) * map_res_;
-                double y2 = (-sin(map_th_)*x + cos(map_th_)*y) * map_res_;
+                double x2 = (cos(map_th_)*x - sin(map_th_)*y) * map_res_;
+                double y2 = (sin(map_th_)*x + cos(map_th_)*y) * map_res_;
                 ret.position.x = x2 + map_x_;
                 ret.position.y = y2 + map_y_;
                 if(is_pose_valid(ret, safety_radius))
@@ -219,8 +220,8 @@ std::vector<unsigned int> MapManager::get_tiles(
     double dx = p.x - map_x_;
     double dy = p.y - map_y_;
 
-    int row = (cos(map_th_)*dx - sin(map_th_)*dy) / map_res_ + 0.5;
-    int col = (sin(map_th_)*dx + cos(map_th_)*dy) / map_res_ + 0.5;
+    int row = ( cos(map_th_)*dx + sin(map_th_)*dy) / map_res_ + 0.5;
+    int col = (-sin(map_th_)*dx + cos(map_th_)*dy) / map_res_ + 0.5;
 
     // Set the area around the pose
     if(radius >= 1e-6) {
@@ -304,8 +305,8 @@ double MapManager::ray_cast(
     const int offsetx = rx > 0 ? 1 : 0;
     const int offsety = ry > 0 ? 1 : 0;
 
-    double curx = cos(map_th_)*dx - sin(map_th_)*dy;
-    double cury = sin(map_th_)*dx + cos(map_th_)*dy;
+    double curx =  cos(map_th_)*dx + sin(map_th_)*dy;
+    double cury = -sin(map_th_)*dx + cos(map_th_)*dy;
 
     const double startx = curx;
     const double starty = cury;

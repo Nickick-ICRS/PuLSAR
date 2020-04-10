@@ -3,7 +3,6 @@
 
 #include <thread>
 #include <shared_mutex>
-#include <cmath>
 
 #include <ros/ros.h>
 #include <nav_msgs/OccupancyGrid.h>

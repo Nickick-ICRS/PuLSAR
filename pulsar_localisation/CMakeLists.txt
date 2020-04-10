@@ -24,6 +24,19 @@ include_directories(
   ${catkin_INCLUDE_DIRS}
 )
 
+add_library(pulsar_funcs
+    src/pulsar_localisation/maths/useful_functions.cpp
+)
+
+add_dependencies(pulsar_funcs
+    ${pulsar_funcs_EXPORTED_TARGETS}
+    ${catkin_EXPORTED_TARGETS}
+)
+
+target_link_libraries(pulsar_funcs
+    ${catkin_LIBRARIES}
+)
+
 add_library(pulsar_cloud_generator
     src/pulsar_localisation/cloud_generator/cloud_generator.cpp
 )
@@ -47,6 +60,7 @@ add_dependencies(pulsar_map_manager
 )
 
 target_link_libraries(pulsar_map_manager
+    pulsar_funcs
     ${catkin_libraries}
 )
 
@@ -62,6 +76,7 @@ add_dependencies(pulsar_sensor_models
 target_link_libraries(pulsar_sensor_models
     pulsar_cloud_generator
     pulsar_map_manager
+    pulsar_funcs
     ${catkin_libraries}
 )
 
@@ -79,6 +94,7 @@ target_link_libraries(pulsar_pose_estimators
     pulsar_cloud_generator
     pulsar_map_manager
     pulsar_sensor_models
+    pulsar_funcs
     ${catkin_LIBRARIES}
 )
 
