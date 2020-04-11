@@ -224,6 +224,10 @@ private:
     // Exponential parameters for Augmented MCL, 0 <= aslow < afast
     static double aslow_, afast_;
 
+    // Parameters for DBSCAN
+    static int dbscan_min_points_;
+    static double dbscan_epsilon_;
+
     // Saves us a lot of constructor parameters by having the above params
     // be static and making this class able to access them.
     friend class LocalisationNode;

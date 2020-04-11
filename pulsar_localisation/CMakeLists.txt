@@ -37,6 +37,19 @@ target_link_libraries(pulsar_funcs
     ${catkin_LIBRARIES}
 )
 
+add_library(pulsar_dbscan
+    src/pulsar_localisation/maths/dbscan.cpp
+)
+
+add_dependencies(pulsar_dbscan
+    ${pulsar_dbscan_EXPORTED_TARGETS}
+    ${catkin_EXPORTED_TARGETS}
+)
+
+target_link_libraries(pulsar_dbscan
+    ${catkin_LIBRARIES}
+)
+
 add_library(pulsar_cloud_generator
     src/pulsar_localisation/cloud_generator/cloud_generator.cpp
 )
@@ -91,10 +104,11 @@ add_dependencies(pulsar_pose_estimators
 )
 
 target_link_libraries(pulsar_pose_estimators
+    pulsar_funcs
+    pulsar_dbscan
     pulsar_cloud_generator
     pulsar_map_manager
     pulsar_sensor_models
-    pulsar_funcs
     ${catkin_LIBRARIES}
 )
 

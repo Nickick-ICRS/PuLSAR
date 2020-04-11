@@ -1,6 +1,7 @@
 #include "pose_estimators/single_robot_pose_estimator.hpp"
 
 #include "maths/useful_functions.hpp"
+#include "maths/dbscan.hpp"
 
 #include <cmath>
 
@@ -14,7 +15,10 @@ double SingleRobotPoseEstimator::a1_,
        SingleRobotPoseEstimator::a3_,
        SingleRobotPoseEstimator::a4_,
        SingleRobotPoseEstimator::aslow_, 
-       SingleRobotPoseEstimator::afast_;
+       SingleRobotPoseEstimator::afast_,
+       SingleRobotPoseEstimator::dbscan_epsilon_;
+
+int    SingleRobotPoseEstimator::dbscan_min_points_;
 
 SingleRobotPoseEstimator::SingleRobotPoseEstimator(
     std::string name, const std::shared_ptr<CloudGenerator>& cloud_gen,
@@ -71,17 +75,51 @@ void SingleRobotPoseEstimator::update_estimate() {
 }
 
 void SingleRobotPoseEstimator::update_pose_estimate_with_covariance() {
+    
+    std::vector<dbscan::Point> dbscan_points;
+
+    for(auto& pose : pose_estimate_cloud_) {
+        dbscan::Point p;
+        p.x = pose.position.x;
+        p.y = pose.position.y;
+        p.z = pose.position.z;
+        p.clusterID = UNCLASSIFIED;
+        p.pose = &pose;
+        dbscan_points.push_back(p);
+    }
+
+    dbscan::DBSCAN db(dbscan_min_points_, dbscan_epsilon_, dbscan_points);
+    db.run();
+
+    std::map<int, std::vector<geometry_msgs::Pose>> clustered_poses;
+    for(const auto& p : db.m_points) {
+        clustered_poses[p.clusterID].push_back(*p.pose);
+    }
+
+    int best_it = 0;
+    int max_size = 0;
+
+    for(const auto& pair : clustered_poses) {
+        if(pair.second.size() > max_size) {
+            max_size = pair.second.size();
+            best_it = pair.first;
+        }
+        ROS_INFO_STREAM("Got cluster of size " << pair.second.size());
+    }
+
+    auto& best_cluster = clustered_poses[best_it];
+
     geometry_msgs::Point avg_point;
     double avg_yaw;
 
     // First calculate means
-    for(const auto& pose : pose_estimate_cloud_) {
+    for(const auto& pose : best_cluster) {
         avg_point.x += pose.position.x;
         avg_point.y += pose.position.y;
         avg_point.z += pose.position.z;
         avg_yaw += quat_to_yaw(pose.orientation);
     }
-    double n = pose_estimate_cloud_.size();
+    double n = best_cluster.size();
     avg_point.x /= n;
     avg_point.y /= n;
     avg_point.z /= n;
@@ -102,7 +140,7 @@ void SingleRobotPoseEstimator::update_pose_estimate_with_covariance() {
     auto& cov_mat = pose_estimate_.pose.covariance;
     // Sample covariance so reduce n by 1
     n -= 1;
-    for(const auto& pose : pose_estimate_cloud_) {
+    for(const auto& pose : best_cluster) {
         double yaw_diff = ang_diff(quat_to_yaw(pose.orientation), avg_yaw);
         cov_mat[0]  += pow(pose.position.x - avg_point.x, 2) / n;
         cov_mat[1]  += (pose.position.x - avg_point.x) 

@@ -51,7 +51,7 @@
         
         <!-- Intrinsic parameters of the range sensors. See Probabilistic
              Robotics by Thrun et al. -->
-        <param name="zhit"     value="0.5"/>
+        <param name="zhit"     value="0.95"/>
         <param name="zshort"   value="0.05"/>
         <param name="zmax"     value="0.0005"/>
         <param name="zrand"    value="0.005"/>
@@ -64,5 +64,11 @@
 
         <!-- Number of particles to be included in the MCL filter -->
         <param name="num_particles" value="200"/>
+
+        <!-- Minimum number of pose estimates within a cluster to be
+             considered as a cluster -->
+        <param name="dbscan_min_points" value="5"/>
+        <!-- Clustering epsilon parameter (metres^2) -->
+        <param name="dbscan_epsilon" value="0.0016"/>
     </node>
 </launch>

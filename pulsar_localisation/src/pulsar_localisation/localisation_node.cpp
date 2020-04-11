@@ -355,7 +355,7 @@ void LocalisationNode::get_ros_parameters() {
         "~a1", SingleRobotPoseEstimator::a1_, 0.2))
     {
         ROS_WARN_STREAM(
-            "Failed to get param a1. Defaulting to '"
+            "Failed to get param 'a1'. Defaulting to '"
             << SingleRobotPoseEstimator::a1_ << "'.");
     }
 
@@ -363,7 +363,7 @@ void LocalisationNode::get_ros_parameters() {
         "~a2", SingleRobotPoseEstimator::a2_, 0.2))
     {
         ROS_WARN_STREAM(
-            "Failed to get param a2. Defaulting to '"
+            "Failed to get param 'a2'. Defaulting to '"
             << SingleRobotPoseEstimator::a2_ << "'.");
     }
 
@@ -371,7 +371,7 @@ void LocalisationNode::get_ros_parameters() {
         "~a3", SingleRobotPoseEstimator::a3_, 0.2))
     {
         ROS_WARN_STREAM(
-            "Failed to get param a3. Defaulting to '"
+            "Failed to get param 'a3'. Defaulting to '"
             << SingleRobotPoseEstimator::a3_ << "'.");
     }
 
@@ -379,7 +379,7 @@ void LocalisationNode::get_ros_parameters() {
         "~a4", SingleRobotPoseEstimator::a4_, 0.2))
     {
         ROS_WARN_STREAM(
-            "Failed to get param a4. Defaulting to '"
+            "Failed to get param 'a4'. Defaulting to '"
             << SingleRobotPoseEstimator::a4_ << "'.");
     }
 
@@ -387,7 +387,7 @@ void LocalisationNode::get_ros_parameters() {
         "~aslow", SingleRobotPoseEstimator::aslow_, 0.2))
     {
         ROS_WARN_STREAM(
-            "Failed to get param aslow. Defaulting to '"
+            "Failed to get param 'aslow'. Defaulting to '"
             << SingleRobotPoseEstimator::aslow_ << "'.");
     }
 
@@ -395,7 +395,7 @@ void LocalisationNode::get_ros_parameters() {
         "~afast", SingleRobotPoseEstimator::afast_, 0.2))
     {
         ROS_WARN_STREAM(
-            "Failed to get param afast. Defaulting to '"
+            "Failed to get param 'afast'. Defaulting to '"
             << SingleRobotPoseEstimator::afast_ << "'.");
     }
 
@@ -403,7 +403,7 @@ void LocalisationNode::get_ros_parameters() {
         "~lamshort", RangeCloudSensorModel::lamshort_, 0.2))
     {
         ROS_WARN_STREAM(
-            "Failed to get param lamshort. Defaulting to '"
+            "Failed to get param 'lamshort'. Defaulting to '"
             << RangeCloudSensorModel::lamshort_ << "'.");
     }
 
@@ -411,7 +411,7 @@ void LocalisationNode::get_ros_parameters() {
         "~sigmahit", RangeCloudSensorModel::sigmahit_, 0.2))
     {
         ROS_WARN_STREAM(
-            "Failed to get param sigmahit. Defaulting to '"
+            "Failed to get param 'sigmahit'. Defaulting to '"
             << RangeCloudSensorModel::sigmahit_ << "'.");
     }
 
@@ -419,7 +419,7 @@ void LocalisationNode::get_ros_parameters() {
         "~ztime", RangeCloudSensorModel::ztime_, 0.2))
     {
         ROS_WARN_STREAM(
-            "Failed to get param ztime. Defaulting to '"
+            "Failed to get param 'ztime'. Defaulting to '"
             << RangeCloudSensorModel::ztime_ << "'.");
     }
 
@@ -427,7 +427,7 @@ void LocalisationNode::get_ros_parameters() {
         "~zhit", RangeCloudSensorModel::zhit_, 0.2))
     {
         ROS_WARN_STREAM(
-            "Failed to get param zhit. Defaulting to '"
+            "Failed to get param 'zhit'. Defaulting to '"
             << RangeCloudSensorModel::zhit_ << "'.");
     }
 
@@ -435,7 +435,7 @@ void LocalisationNode::get_ros_parameters() {
         "~zshort", RangeCloudSensorModel::zshort_, 0.2))
     {
         ROS_WARN_STREAM(
-            "Failed to get param zshort. Defaulting to '"
+            "Failed to get param 'zshort'. Defaulting to '"
             << RangeCloudSensorModel::zshort_ << "'.");
     }
 
@@ -443,7 +443,7 @@ void LocalisationNode::get_ros_parameters() {
         "~zmax", RangeCloudSensorModel::zmax_, 0.2))
     {
         ROS_WARN_STREAM(
-            "Failed to get param zmax. Defaulting to '"
+            "Failed to get param 'zmax'. Defaulting to '"
             << RangeCloudSensorModel::zmax_ << "'.");
     }
 
@@ -451,7 +451,7 @@ void LocalisationNode::get_ros_parameters() {
         "~zrand", RangeCloudSensorModel::zrand_, 0.2))
     {
         ROS_WARN_STREAM(
-            "Failed to get param zrand. Defaulting to '"
+            "Failed to get param 'zrand'. Defaulting to '"
             << RangeCloudSensorModel::zrand_ << "'.");
     }
 
@@ -459,7 +459,25 @@ void LocalisationNode::get_ros_parameters() {
         "~num_particles", particle_filter_size_, 50))
     {
         ROS_WARN_STREAM(
-            "Failed to get param num_particles. Defaulting to '"
+            "Failed to get param 'num_particles'. Defaulting to '"
             << particle_filter_size_ << "'.");
+    }
+
+    if(!ros::param::param<int>(
+        "~dbscan_min_points", SingleRobotPoseEstimator::dbscan_min_points_,
+        5))
+    {
+        ROS_WARN_STREAM(
+            "Failed to get param 'dbscan_min_points'. Defaulting to '"
+            << SingleRobotPoseEstimator::dbscan_min_points_ << "'.");
+    }
+
+    if(!ros::param::param<double>(
+        "~dbscan_epsilon", SingleRobotPoseEstimator::dbscan_epsilon_,
+        0.05*0.05))
+    {
+        ROS_WARN_STREAM(
+            "Failed to get param 'dbscan_epsilon'. Defaulting to '"
+            << SingleRobotPoseEstimator::dbscan_epsilon_ << "'.");
     }
 }
