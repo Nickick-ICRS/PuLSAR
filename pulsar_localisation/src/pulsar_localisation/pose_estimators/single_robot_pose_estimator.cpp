@@ -201,8 +201,7 @@ geometry_msgs::Pose SingleRobotPoseEstimator::sample_motion_model_odometry(
     xt.position.x = xt_1.position.x + sdtrans * cos(tht_1 + sdrot1);
     xt.position.y = xt_1.position.y + sdtrans * sin(tht_1 + sdrot1);
     tht = tht_1 + sdrot1 + sdrot2;
-    xt.orientation.w = cos(tht/2.f);
-    xt.orientation.z = sin(tht/2.f);
+    xt.orientation = yaw_to_quat(tht);
 
     return xt;
 }
@@ -369,7 +368,7 @@ geometry_msgs::TransformStamped
     geometry_msgs::TransformStamped tf;
     tf.header.stamp = ros::Time::now();
     tf.header.frame_id = map_frame_;
-    tf.child_frame_id = odom.header.frame_id;
+    tf.child_frame_id = odom.child_frame_id;//odom.header.frame_id;
     tf.transform.translation.x = mCb.getOrigin().x();
     tf.transform.translation.y = mCb.getOrigin().y();
     tf.transform.translation.z = mCb.getOrigin().z();

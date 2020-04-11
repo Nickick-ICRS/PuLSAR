@@ -70,7 +70,7 @@
             <param name="imu0_remove_gravitational_acceleration" value="true"/>
             <param name="imu0_relative" value="false"/>
 
-            <param name="publish_tf" value="true"/>
+            <param name="publish_tf" value="false"/>
             <param name="smooth_lagged_data" value="true"/>
             <param name="history_length" value="5"/>
         </node>
