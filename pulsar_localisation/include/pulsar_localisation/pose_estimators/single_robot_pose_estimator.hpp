@@ -159,15 +159,16 @@ private:
      * Sample from p(xt | ut, xt-1) given odometry information. See 
      * Probabilistic Robotics by Thrun et al.
      *
-     * @param ut The most recent odometry measurement, transformed into the
-     *           map frame (to account for estimated deviances).
+     * @param ut The most recent odometry measurement.
+     *
+     * @param ut_1 The previously used odometry measurement.
      *
      * @param xt_1 The most recent pose estimate.
      *
      * @return The current (new) pose estimate.
      */
     geometry_msgs::Pose sample_motion_model_odometry(
-        const geometry_msgs::Pose& ut,
+        const geometry_msgs::Pose& ut, const geometry_msgs::Pose& ut_1,
         const geometry_msgs::Pose& xt_1);
 
     /**
@@ -207,6 +208,7 @@ private:
     geometry_msgs::PoseWithCovarianceStamped pose_estimate_;
     std::vector<geometry_msgs::Pose> pose_estimate_cloud_;
     nav_msgs::Odometry recent_odom_;
+    nav_msgs::Odometry prev_odom_;
 
     std::mutex odom_mut_;
 

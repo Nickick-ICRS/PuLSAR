@@ -6,9 +6,6 @@
 #include <cmath>
 
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
-#include <tf2/LinearMath/Vector3.h>
-#include <tf2/LinearMath/Quaternion.h>
-#include <tf2/LinearMath/Transform.h>
 
 double SingleRobotPoseEstimator::a1_,
        SingleRobotPoseEstimator::a2_,
@@ -180,14 +177,15 @@ double SingleRobotPoseEstimator::sample_normal_distribution(double b2) {
 }
 
 geometry_msgs::Pose SingleRobotPoseEstimator::sample_motion_model_odometry(
-    const geometry_msgs::Pose& ut, const geometry_msgs::Pose& xt_1)
+    const geometry_msgs::Pose& ut, const geometry_msgs::Pose& ut_1, 
+    const geometry_msgs::Pose& xt_1)
 {
     double tht = quat_to_yaw(ut.orientation);
-    double tht_1 = quat_to_yaw(xt_1.orientation);
-    double drot1 = atan2(ut.position.y - xt_1.position.y,
-                        ut.position.x - xt_1.position.x) - tht;
-    double dtrans = sqrt(pow(xt_1.position.x - ut.position.x, 2) +
-                         pow(xt_1.position.y - ut.position.y, 2));
+    double tht_1 = quat_to_yaw(ut_1.orientation);
+    double drot1 = atan2(ut.position.y - ut_1.position.y,
+                        ut.position.x - ut_1.position.x) - tht_1;
+    double dtrans = sqrt(pow(ut_1.position.x - ut.position.x, 2) +
+                         pow(ut_1.position.y - ut.position.y, 2));
     double drot2 = tht - tht_1 - drot1;
 
     double sdrot1 = drot1 - sample_normal_distribution(
@@ -200,7 +198,8 @@ geometry_msgs::Pose SingleRobotPoseEstimator::sample_motion_model_odometry(
     geometry_msgs::Pose xt;
     xt.position.x = xt_1.position.x + sdtrans * cos(tht_1 + sdrot1);
     xt.position.y = xt_1.position.y + sdtrans * sin(tht_1 + sdrot1);
-    tht = tht_1 + sdrot1 + sdrot2;
+
+    double th = quat_to_yaw(xt_1.orientation) + sdrot1 + sdrot2;
     xt.orientation = yaw_to_quat(tht);
 
     return xt;
@@ -231,29 +230,13 @@ std::vector<geometry_msgs::Pose>
 
     // Transform the odometry message into the most recent map frame
     // estimate
-    geometry_msgs::Pose ut_map;
-    try {
-        auto trans = tf2_.lookupTransform(
-            map_frame_, ut.header.frame_id, ros::Time(0));
-        tf2::doTransform(ut.pose.pose, ut_map, trans);
-    }
-    catch(const tf2::LookupException& ex) {
-        // Transform doesn't exist yet, so assume 0
-        ROS_WARN_STREAM(
-            "SingleRobotPoseEstimator caught '" << ex.what()
-            << "' in function augmented_MCL");
-        ut_map = ut.pose.pose;
-    }
-    catch(const tf2::TransformException& ex) {
-        ROS_WARN_STREAM(
-            "SingleRobotPoseEstimator caught '" << ex.what()
-            << "' in function augmented_MCL");
-        ut_map = ut.pose.pose;
-    }
+    geometry_msgs::Pose utp, utp_1;
+    utp = ut.pose.pose;
+    utp_1 = prev_odom_.pose.pose;
 
     for(int m = 0; m < M; m++) {
         // Update the motion model
-        xt.push_back(sample_motion_model_odometry(ut_map, Xt_1[m]));
+        xt.push_back(sample_motion_model_odometry(utp, utp_1, Xt_1[m]));
         // Update the measurement model
         wt.push_back(range_model_.model(
             xt[m], cloud_gen_->get_raw_data(name_), name_, 
@@ -336,46 +319,20 @@ geometry_msgs::TransformStamped
     SingleRobotPoseEstimator::calculate_transform(
         const nav_msgs::Odometry& odom)
 {
-    // Get the transform matrix for the odometry
-    tf2::Vector3 vec(
-        odom.pose.pose.position.x, odom.pose.pose.position.y,
-        odom.pose.pose.position.z);
-
-    tf2::Quaternion quat(
-        odom.pose.pose.orientation.x, odom.pose.pose.orientation.y,
-        odom.pose.pose.orientation.z, odom.pose.pose.orientation.w);
-
-    tf2::Transform oCb(quat, vec);
-
-    // Get the transform matrix for the pose estimate
-    vec = tf2::Vector3(
-        pose_estimate_.pose.pose.position.x,
-        pose_estimate_.pose.pose.position.y,
-        pose_estimate_.pose.pose.position.z);
-    
-    quat = tf2::Quaternion(
-        pose_estimate_.pose.pose.orientation.x, 
-        pose_estimate_.pose.pose.orientation.y,
-        pose_estimate_.pose.pose.orientation.z,
-        pose_estimate_.pose.pose.orientation.w);
-
-    tf2::Transform mCb(quat, vec);
-
-    // Calculate the transform matrix for map to odom
-    tf2::Transform mCo = mCb * oCb.inverse();
+    double yaw = quat_to_yaw(pose_estimate_.pose.pose.orientation)
+               - quat_to_yaw(odom.pose.pose.orientation);
 
     // Create the message and return
     geometry_msgs::TransformStamped tf;
     tf.header.stamp = ros::Time::now();
     tf.header.frame_id = map_frame_;
-    tf.child_frame_id = odom.child_frame_id;//odom.header.frame_id;
-    tf.transform.translation.x = mCb.getOrigin().x();
-    tf.transform.translation.y = mCb.getOrigin().y();
-    tf.transform.translation.z = mCb.getOrigin().z();
-    tf.transform.rotation.x = mCb.getRotation().x();
-    tf.transform.rotation.y = mCb.getRotation().y();
-    tf.transform.rotation.z = mCb.getRotation().z();
-    tf.transform.rotation.w = mCb.getRotation().w();
-
+    tf.child_frame_id = odom.header.frame_id;
+    tf.transform.translation.x =
+        pose_estimate_.pose.pose.position.x - odom.pose.pose.position.x;
+    tf.transform.translation.y =
+        pose_estimate_.pose.pose.position.y - odom.pose.pose.position.y;
+    tf.transform.translation.z =
+        pose_estimate_.pose.pose.position.z - odom.pose.pose.position.z;
+    tf.transform.rotation = yaw_to_quat(yaw);
     return tf;
 }

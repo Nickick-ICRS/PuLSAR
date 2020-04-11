@@ -20,7 +20,7 @@
         <!-- noise in translation estimate due to translation -->
         <param name="a3" value="0.1"/>
         <!-- noise in translation estimate due to rotation -->
-        <param name="a4" value="0.001"/>
+        <param name="a4" value="0.1"/>
         <!-- Exponential parameters for augmented MCL, 0 <= aslow < afast.
              See Probabilistic Robotics by Thrun et al. -->
         <param name="aslow" value="0.001"/>
