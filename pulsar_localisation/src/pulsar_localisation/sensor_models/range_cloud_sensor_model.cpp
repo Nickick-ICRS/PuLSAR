@@ -178,9 +178,8 @@ float RangeCloudSensorModel::model(
         // Update the total probability
         q *= prob;
     }
-    if(q > 1) {
+    if(q > 100) {
         ROS_WARN_STREAM("q > 1: " << q);
-        q = 1;
     }
     return q;
 }
@@ -189,31 +188,18 @@ float RangeCloudSensorModel::phit(
     const sensor_msgs::Range& z, double ideal_z)
 {
     if(z.range > z.max_range || z.range < z.min_range) return 0;
-    // Helper lambda
-    static auto N = [this](double z, double ideal_z, double sigmahit2) {
-        double a = 1/sqrt(2*M_PI*sigmahit2);
-        double b = exp(-0.5*pow(z-ideal_z, 2)/sigmahit2);
-        return a*b;
-    };
-    
-    // Simpson's rule in a helper lambda
-    static auto integral = [this](
-        const sensor_msgs::Range& z, double ideal_z, double sigmahit2)
-    {
-        const int NUM_DIVISIONS = 2*200;
-        double delta = z.max_range / (double)NUM_DIVISIONS;
-        double area = 0;
-        for(double zi = 0; zi < z.max_range; zi += 2 * delta) {
-            area += N(zi, ideal_z, sigmahit2)
-                 + 4 * N(zi+delta, ideal_z, sigmahit2)
-                 + N(zi+2*delta, ideal_z, sigmahit2);
-        }
-        area *= delta/3;
-        return area;
-    };
 
-    double eta = 1/integral(z, ideal_z, pow(sigmahit_, 2));
-    return eta * N(z.range, ideal_z, pow(sigmahit_, 2));
+    // Indefinite integral pre calculated via wolfram alpha
+    double a = 0.5*erf(sqrt(0.5)*(z.max_range - ideal_z)/sigmahit_);
+    double b = 0.5*erf(sqrt(0.5)*(0 - ideal_z)/sigmahit_);
+    double eta = 1.0/(a - b);
+
+    double sigmahit2 = pow(sigmahit_, 2);
+    a = 1/sqrt(2*M_PI*sigmahit2);
+    b = exp(-0.5*pow(z.range-ideal_z, 2)/sigmahit2);
+    double n = a*b;
+
+    return eta * n;
 }
 
 float RangeCloudSensorModel::pshort(

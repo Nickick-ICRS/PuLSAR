@@ -51,11 +51,11 @@
         
         <!-- Intrinsic parameters of the range sensors. See Probabilistic
              Robotics by Thrun et al. -->
-        <param name="zhit"     value="0.95"/>
+        <param name="zhit"     value="0.5"/>
         <param name="zshort"   value="0.05"/>
         <param name="zmax"     value="0.0005"/>
         <param name="zrand"    value="0.005"/>
-        <param name="sigmahit" value="0.03"/>
+        <param name="sigmahit" value="0.3"/>
         <param name="lamshort" value="0.02"/>
 
         <!-- Exponential parameter representing how unreliable old data is 
