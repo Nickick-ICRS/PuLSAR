@@ -56,11 +56,11 @@ def get_measurements():
     l, m, r = 0, 0, 0
     for key in data:
         if "left" in key:
-            l = data[key].range
+            l = data[key].range - data[key].min_range
         elif "middle" in key:
-            m = data[key].range
+            m = data[key].range - data[key].min_range
         elif "right" in key:
-            r = data[key].range
+            r = data[key].range - data[key].min_range
         else:
             print("Unknown Key: " + str(key))
     Z = Measurement(l, m, r)
