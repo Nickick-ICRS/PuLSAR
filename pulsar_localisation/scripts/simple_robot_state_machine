@@ -1,0 +1,219 @@
+#!/usr/bin/env python
+
+from collections import namedtuple
+import random
+
+import rospy
+
+from sensor_msgs.msg import Range
+from geometry_msgs.msg import Twist
+
+
+# Parameters (all positive!)
+MIN_FORWARDS    = 0.15
+MAX_FORWARDS    = 0.30
+FORWARDS_CONST  = 0.75
+MIN_BACKWARDS   = 0.10
+MAX_BACKWARDS   = 0.20
+BACKWARDS_CONST = 0.05
+MIN_TURNING     = 4.00
+MAX_TURNING     = 7.00
+TURNING_CONST   = 2.00
+
+# State machine states
+TURNING             = 0
+FORWARDS            = 1
+BACKWARDS           = 2
+TURNING_FORWARDS    = 3
+PAUSED              = 4
+
+
+Measurement = namedtuple('Measurement', 'l m r')
+
+
+def print_state(state):
+    if state == TURNING:
+        print("TURNING")
+    elif state == FORWARDS:
+        print("FORWARDS")
+    elif state == BACKWARDS:
+        print("BACKWARDS")
+    elif state == TURNING_FORWARDS:
+        print("TURNING_FORWARDS")
+    elif state == PAUSED:
+        print("PAUSED")
+    else:
+        print("Unknown state: " + str(state))
+
+
+def range_cb(msg):
+    global data
+    data[msg.header.frame_id] = msg
+
+
+def get_measurements():
+    global data
+    l, m, r = 0, 0, 0
+    for key in data:
+        if "left" in key:
+            l = data[key].range
+        elif "middle" in key:
+            m = data[key].range
+        elif "right" in key:
+            r = data[key].range
+        else:
+            print("Unknown Key: " + str(key))
+    Z = Measurement(l, m, r)
+    return Z
+
+
+def get_new_state(state, Z):
+    if state == PAUSED:
+        r = random.random()
+        if r < 0.1:
+            # Intentionally letting this carry over, so that the forwards
+            # state decision can decide whether to turn or not etc...
+            state = FORWARDS
+    if state == FORWARDS:
+        r = random.random()
+        pause_p = 0.05
+        if r < pause_p:
+            return PAUSED
+        r -= pause_p
+        back_p = max(1 - 5*Z.m, 0)
+        if r < back_p:
+            return BACKWARDS
+        r -= back_p
+        closest_ang = min(Z.l, Z.r)
+        turn_p = min(1 - 5*closest_ang, 0)
+        if r < turn_p:
+            return TURNING
+        r -= turn_p
+        fturn_p = min(0.2 - 0.5*closest_ang, 0)
+        if r < fturn_p:
+            return TURNING_FORWARDS
+    if state == BACKWARDS:
+        if Z.m < 0.1:
+            return BACKWARDS
+        r = random.random()
+        turn_p = 0.4
+        if r < turn_p:
+            return TURNING
+        r -= turn_p
+        pause_p = 0.01
+        if r < pause_p:
+            return PAUSED
+        r -= pause_p
+        fturn_p = 0.15
+        if r < fturn_p:
+            return TURNING_FORWARDS
+        r -= fturn_p
+        forw_p = 0.15
+        if r < forw_p:
+            return FORWARDS
+    if state == TURNING:
+        r = random.random()
+        forw_p = 0.01
+        if r < forw_p:
+            return FORWARDS
+        r -= forw_p
+        fturn_p = 0.05
+        if r < fturn_p:
+            return TURNING_FORWARDS
+        pause_p = 0.02
+        if r < pause_p:
+            return PAUSED
+    if state == TURNING_FORWARDS:
+        r = random.random()
+        pause_p = 0.002
+        if r < pause_p:
+            return PAUSED
+        r -= pause_p
+        back_p = max(1 - 5*Z.m, 0)
+        if r < back_p:
+            return BACKWARDS
+        r -= back_p
+        closest_ang = min(Z.l, Z.r)
+        turn_p = min(1 - 4*closest_ang, 0)
+        if r < turn_p:
+            return TURNING
+    return state
+
+
+def get_cmd_vel(state, Z):
+    cmd_vel = Twist()
+    if state == PAUSED:
+        pass
+    if state == FORWARDS:
+        closest = min(Z.l, Z.m, Z.r)
+        cmd_vel.linear.x = min(
+            MIN_FORWARDS + FORWARDS_CONST * closest, MAX_FORWARDS)
+    if state == BACKWARDS:
+        closest = min(Z.l, Z.m, Z.r)
+        if closest <= 0.01:
+            cmd_vel.linear.x = -MAX_BACKWARDS
+        else:
+            cmd_vel.linear.x = -min(
+                MIN_BACKWARDS + BACKWARDS_CONST / closest, MAX_BACKWARDS)
+    if state == TURNING:
+        if Z.l < Z.r:
+            if Z.l <= 0.01:
+                cmd_vel.angular.z = -MAX_TURNING
+            else:
+                cmd_vel.angular.z = -min(
+                    MIN_TURNING + TURNING_CONST / Z.l, MAX_TURNING)
+        else:
+            if Z.r <= 0.01:
+                cmd_vel.angular.z = MAX_TURNING
+            else:
+                cmd_vel.angular.z = min(
+                    MIN_TURNING + TURNING_CONST / Z.r, MAX_TURNING)
+    if state == TURNING_FORWARDS:
+        closest = min(Z.l, Z.m, Z.r)
+        cmd_vel.linear.x = min(
+            MIN_FORWARDS + FORWARDS_CONST * closest, MAX_FORWARDS)
+        if Z.l < Z.r:
+            if Z.l <= 0.01:
+                cmd_vel.angular.z = -MAX_TURNING
+            else:
+                cmd_vel.angular.z = -min(
+                    MIN_TURNING + TURNING_CONST / Z.l, MAX_TURNING)
+        else:
+            if Z.r <= 0.01:
+                cmd_vel.angular.z = MAX_TURNING
+            else:
+                cmd_vel.angular.z = min(
+                    MIN_TURNING + TURNING_CONST / Z.r, MAX_TURNING)
+    return cmd_vel
+
+
+def main():
+    global data
+    data = dict()
+    rospy.init_node("basic_state_machine")
+
+    rospy.Subscriber("/pulsar_0/left_range_finder/range", Range, range_cb)
+    rospy.Subscriber("/pulsar_0/middle_range_finder/range", Range, range_cb)
+    rospy.Subscriber("/pulsar_0/right_range_finder/range", Range, range_cb)
+
+    pub = rospy.Publisher("/pulsar_0/cmd_vel", Twist, queue_size=1)
+
+    state = PAUSED
+    
+    sleeper = rospy.Rate(20)
+    while not rospy.is_shutdown():
+        measurements = get_measurements()
+        old_state = state
+        state = get_new_state(state, measurements)
+        if state != old_state:
+            print_state(state)
+        cmd_vel = get_cmd_vel(state, measurements)
+        pub.publish(cmd_vel)
+        sleeper.sleep()
+
+
+if __name__ == '__main__':
+    try:
+        main()
+    except rospy.ROSInterruptException:
+        pass
