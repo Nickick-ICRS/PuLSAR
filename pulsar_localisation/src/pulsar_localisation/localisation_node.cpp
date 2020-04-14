@@ -151,6 +151,7 @@ LocalisationNode::~LocalisationNode() {
 }
 
 #include <geometry_msgs/PoseArray.h>
+#include "maths/useful_functions.hpp"
 void LocalisationNode::loop() {
     ros::Rate sleeper(1.0/2.f);
 
@@ -162,12 +163,22 @@ void LocalisationNode::loop() {
     std::random_device r;
     std::default_random_engine el(r());
     std::uniform_real_distribution<double> dist(-1, 1);
+    auto& range_model = pose_est_->robot_pose_estimators_["pulsar_0"]->range_model_;
+    geometry_msgs::Pose pose_tests[5];
+    double x = 0;
+    for(auto& p : pose_tests) {
+        p.position.x = x;
+        x += 0.1;
+        p.orientation.w = 1;
+    }
     while(running_) {
-        cloud_gen_->clean_all_clouds();
         sleeper.sleep();
-
+        cloud_gen_->clean_all_clouds();
+        for(auto& p : pose_tests) {
+            ROS_WARN_STREAM("x: " << p.position.x << " y: " << p.position.y << " w: " << range_model.model(p, cloud_gen_->get_raw_data("pulsar_0"), "pulsar_0", "pulsar_0/base_link"));
+        }
         cloud_gen_->publish_cloud("pulsar_0");
-
+/*
         pose_est_->robot_pose_estimators_["pulsar_0"]->update_estimate();
         auto& pt = pose_est_->robot_pose_estimators_["pulsar_0"]->get_pose_estimate();
         auto& pts = pose_est_->robot_pose_estimators_["pulsar_0"]->get_pose_estimates();
@@ -177,6 +188,7 @@ void LocalisationNode::loop() {
         }
         c.header.stamp = ros::Time::now();
         pub.publish(c);
+        */
     }
 }
 

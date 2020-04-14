@@ -113,6 +113,11 @@ void CloudGenerator::clean_cloud(std::vector<sensor_msgs::Range>& cloud) {
             it = --cloud.erase(it);
         }
     }
+    // TODO: Remove this after tests
+    auto it = cloud.begin();
+    while(cloud.size() > 6) {
+        it = cloud.erase(it);
+    }
 }
 
 void CloudGenerator::range_cb(const sensor_msgs::RangeConstPtr& msg) {

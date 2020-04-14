@@ -91,7 +91,7 @@ def ray_cast(x, ang):
     dx = x.position.x - map_grid.info.origin.position.x
     dy = x.position.y - map_grid.info.origin.position.y
 
-    ang += th
+    ang -= th
     rx = np.cos(ang)
     ry = np.sin(ang)
 
@@ -240,7 +240,7 @@ def learn_params(Z, X, raw_Z, res=0.001):
     while((abs(nhit-zhit) > res or abs(nshort-zshort) > res or
            abs(nmax-zmax) > res or abs(nrand-zrand) > res or
            abs(nsigma-sigmahit) > res or abs(nlam-lamshort) > res)
-          and not rospy.is_shutdown()) or it < 5:
+          and not rospy.is_shutdown()):
         zhit = nhit
         zshort = nshort
         zmax = nmax

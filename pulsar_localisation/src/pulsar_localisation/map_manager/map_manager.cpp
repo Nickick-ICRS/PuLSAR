@@ -105,6 +105,9 @@ geometry_msgs::Pose MapManager::make_pose_valid(
     if(is_pose_valid(pose, safety_radius))
         return pose;
 
+    // TODO: Either fix this or remove the function entirely
+    return pose;
+
     geometry_msgs::Pose ret(pose);
 
     auto checked_tiles = get_tiles(pose.position, safety_radius);
@@ -291,7 +294,7 @@ double MapManager::ray_cast(
     const geometry_msgs::Point& p, double ang,
     const std::vector<int8_t>& map)
 {
-    ang += map_th_;
+    ang -= map_th_;
 
     const double dx = p.x - map_x_;
     const double dy = p.y - map_y_;

@@ -16,11 +16,11 @@
         <!-- noise in rotation estimate due to rotation -->
         <param name="a1" value="0.00001"/>
         <!-- noise in rotation estimate due to translation -->
-        <param name="a2" value="0.01"/>
+        <param name="a2" value="0.001"/>
         <!-- noise in translation estimate due to translation -->
-        <param name="a3" value="0.1"/>
+        <param name="a3" value="0.005"/>
         <!-- noise in translation estimate due to rotation -->
-        <param name="a4" value="0.1"/>
+        <param name="a4" value="0.005"/>
         <!-- Exponential parameters for augmented MCL, 0 <= aslow < afast.
              See Probabilistic Robotics by Thrun et al. -->
         <param name="aslow" value="0.001"/>
@@ -28,7 +28,7 @@
 
         <!-- Keep range data in the filter for up to <value> seconds. 
              Large values will (obviously) make this slowwwww... -->
-        <param name="history_length" value="4"/>
+        <param name="history_length" value="0.5"/>
         <!-- 0.01 second resolution in time keeping for the range sensor
              model -->
         <param name="time_resolution" value="0.01"/>
@@ -51,12 +51,12 @@
         
         <!-- Intrinsic parameters of the range sensors. See Probabilistic
              Robotics by Thrun et al. -->
-        <param name="zhit"     value="0.8074"/>
-        <param name="zshort"   value="0.1502"/>
-        <param name="zmax"     value="0.02839"/>
-        <param name="zrand"    value="0.2025"/>
-        <param name="sigmahit" value="0.6107"/>
-        <param name="lamshort" value="2.789"/>
+        <param name="zhit"     value="0.8028"/>
+        <param name="zshort"   value="0.1461"/>
+        <param name="zmax"     value="0.0152"/>
+        <param name="zrand"    value="0.2139"/>
+        <param name="sigmahit" value="0.606"/>
+        <param name="lamshort" value="2.733"/>
 
         <!-- Exponential parameter representing how unreliable old data is 
              considered to be. >= 0, larger = more unreliable-->

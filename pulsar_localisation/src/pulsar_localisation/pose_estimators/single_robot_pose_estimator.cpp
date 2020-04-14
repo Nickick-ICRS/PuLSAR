@@ -69,6 +69,8 @@ void SingleRobotPoseEstimator::update_estimate() {
 
     auto tf = calculate_transform(odom);
     tf_broadcaster_.sendTransform(tf);
+    
+    cloud_gen_->clean_cloud(name_);
 }
 
 void SingleRobotPoseEstimator::update_pose_estimate_with_covariance() {
