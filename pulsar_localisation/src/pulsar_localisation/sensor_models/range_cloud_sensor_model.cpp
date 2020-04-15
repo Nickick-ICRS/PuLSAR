@@ -12,13 +12,13 @@ double RangeCloudSensorModel::zshort_;
 double RangeCloudSensorModel::zmax_;
 double RangeCloudSensorModel::zrand_;
 
-float RangeCloudSensorModel::history_length_;
+int   RangeCloudSensorModel::cycle_sensor_readings_;
 float RangeCloudSensorModel::time_resolution_;
 
 RangeCloudSensorModel::RangeCloudSensorModel(
     std::string map_frame, const std::shared_ptr<MapManager>& map_man)
     
-    :tf_buffer_(ros::Duration(history_length_)), tf2_(tf_buffer_),
+    :tf_buffer_(ros::Duration(cycle_sensor_readings_)), tf2_(tf_buffer_),
     map_frame_(map_frame), map_man_(map_man)
 {
     // ctor
@@ -31,6 +31,8 @@ RangeCloudSensorModel::~RangeCloudSensorModel() {
 void RangeCloudSensorModel::add_pose_estimate(
     const geometry_msgs::PoseWithCovarianceStamped& p)
 {
+    // TODO: Do I need this?
+    /*
     // Store current time so we can remove any old time points
     ros::Time now = ros::Time::now();
     // Check if we have a pose estimate with a similar time slot
@@ -38,7 +40,7 @@ void RangeCloudSensorModel::add_pose_estimate(
     float best_diff = 1e10;
     for(int i = 0; i < pose_estimates_.size(); i++) {
         if(pose_estimates_[i].header.stamp < 
-           now - ros::Duration(history_length_))
+           now - ros::Duration(cycle_sensor_readings_))
         {
             pose_estimates_.erase(pose_estimates_.begin()+i);
             i--;
@@ -68,6 +70,7 @@ void RangeCloudSensorModel::add_pose_estimate(
         else
             pose_estimates_.insert(pose_estimates_.begin() + best_i + 1, p);
     }
+    */
 }
 
 float RangeCloudSensorModel::model(
@@ -159,27 +162,30 @@ float RangeCloudSensorModel::model(
         float prob = zhit_*phit(z, ideal_z) + zshort_*pshort(z, ideal_z)
                    + zmax_*pmax(z) + zrand_*prand(z);
         prob /= zhit_+zshort_+zmax_+zrand_;
-/*        ROS_INFO_STREAM("prob: " << prob << " phit: " << phit(z, ideal_z)
+        /*
+        ROS_INFO_STREAM("prob: " << prob << " phit: " << phit(z, ideal_z)
             << " pshort " << pshort(z, ideal_z) << " pmax " << pmax(z)
-            << " prand " << prand(z));*/
+            << " prand " << prand(z) << " z " << z.range << " iz " << ideal_z);
+        */
 
+/*
         // Older points are less reliable, so increase the probability of
         // them being 'correct' such that they have less of a negative
         // effect on the overall probability
         auto dur = now - z.header.stamp;
-        double frac = (dur.sec + dur.nsec / 1e9) / history_length_;
+        double frac = (dur.sec + dur.nsec / 1e9) / cycle_sensor_readings_;
         if(z.header.stamp >= now - ros::Duration(0.2))
             frac = 0;
         frac = exp(-ztime_ * frac);
         prob = 1 - frac + frac * prob;
-
 //        ROS_INFO_STREAM("T: " << dur << " f: " << frac << " p: " << prob);
+*/
 
         // Update the total probability
         q *= prob;
     }
     if(q > 100) {
-        ROS_WARN_STREAM("q > 1: " << q);
+        ROS_WARN_STREAM("q > 100: " << q);
     }
     return q;
 }

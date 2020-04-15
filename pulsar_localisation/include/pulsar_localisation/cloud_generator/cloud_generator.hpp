@@ -37,8 +37,8 @@ public:
      *                          data should be read and incorporated into
      *                          the whole point cloud.
      *
-     * @param history_length Data older than this number of seconds will be
-     *                        discarded and removed from the cloud.
+     * @param cycle_sensor_readings The most recent X measurements are
+     *                              stored in the cloud.
      *
      * @param odom_name The name of the odom of the robots.
      *                       Defaults to "odom". Currently assumed that
@@ -46,8 +46,8 @@ public:
      *                       have separate tf_prefixes.
      */
     CloudGenerator(
-        std::vector<std::string> range_topic_names, float history_length,
-        std::string odom_name = "odom");
+        std::vector<std::string> range_topic_names, 
+        float cycle_sensor_readings, std::string odom_name = "odom");
     ~CloudGenerator();
 
     /**
@@ -68,7 +68,7 @@ public:
      * @brief Updates all point clouds by removing old data.
      *
      * Updates all point clouds by removing any points with intensity values
-     * lower than the current time - history_length_.
+     * lower than the current time - cycle_sensor_readings_.
      */
     void clean_all_clouds();
 
@@ -76,7 +76,7 @@ public:
      * @brief Updates a single point cloud by removing old data.
      *
      * Updates a single point cloud by removing any points with intensity
-     * values lower than the current time - history_length_.
+     * values lower than the current time - cycle_sensor_readings_.
      *
      * @param name The name (tf_prefix of the robot) of the point cloud.
      */
@@ -90,16 +90,13 @@ public:
      * @return The data.
      */
     const std::vector<sensor_msgs::Range>& get_raw_data(
-        std::string robot_name) 
-    {
-        return robot_raw_data_[robot_name];
-    };
+        std::string robot_name) ;
 private:
     /**
      * @brief Updates a single point cloud by removing old data.
      *
      * Updates a single point cloud by removing any points with intensity
-     * values lower than the current time - history_length_.
+     * values lower than the current time - cycle_sensor_readings_.
      *
      * @param cloud The point cloud to be updated.
      */
@@ -109,7 +106,7 @@ private:
      * @brief Updates a single raw data cloud by removing old data.
      *
      * Updates a single raw data cloud by removing any data gathered earlier
-     * than the current time - history_length_.
+     * than the current time - cycle_sensor_readings_.
      *
      * @param cloud The raw data vector to be updated.
      */
@@ -170,9 +167,9 @@ private:
     std::string odom_name_;
 
     /**
-     * Point cloud data is only stored for this long.
+     * Only this many readings are stored between updates.
      */
-    float history_length_;
+    int cycle_sensor_readings_;
 };
 
 #endif // __CLOUD_GENERATOR_HPP__

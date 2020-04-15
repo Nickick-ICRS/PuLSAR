@@ -115,7 +115,7 @@ private:
     static double zmax_;
     static double zrand_;
 
-    static float history_length_;
+    static int cycle_sensor_readings_;
     static float time_resolution_;
 
     friend class LocalisationNode;

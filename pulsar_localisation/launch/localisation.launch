@@ -16,19 +16,21 @@
         <!-- noise in rotation estimate due to rotation -->
         <param name="a1" value="0.00001"/>
         <!-- noise in rotation estimate due to translation -->
-        <param name="a2" value="0.001"/>
+        <param name="a2" value="0.01"/>
         <!-- noise in translation estimate due to translation -->
-        <param name="a3" value="0.005"/>
+        <param name="a3" value="0.4"/>
         <!-- noise in translation estimate due to rotation -->
-        <param name="a4" value="0.005"/>
+        <param name="a4" value="0.00005"/>
         <!-- Exponential parameters for augmented MCL, 0 <= aslow < afast.
              See Probabilistic Robotics by Thrun et al. -->
-        <param name="aslow" value="0.001"/>
+        <param name="aslow" value="0.002"/>
         <param name="afast" value="0.1"/>
 
-        <!-- Keep range data in the filter for up to <value> seconds. 
-             Large values will (obviously) make this slowwwww... -->
-        <param name="history_length" value="0.5"/>
+        <!-- How many sensor data points should be stored for each update
+             cycle. The larger this is the slower the algorithm will
+             perform. This should be a multiple of the number of sensors
+             on the robots. -->
+        <param name="cycle_sensor_readings" value="6"/>
         <!-- 0.01 second resolution in time keeping for the range sensor
              model -->
         <param name="time_resolution" value="0.01"/>
@@ -55,7 +57,7 @@
         <param name="zshort"   value="0.1461"/>
         <param name="zmax"     value="0.0152"/>
         <param name="zrand"    value="0.2139"/>
-        <param name="sigmahit" value="0.606"/>
+        <param name="sigmahit" value="0.0200"/>
         <param name="lamshort" value="2.733"/>
 
         <!-- Exponential parameter representing how unreliable old data is 

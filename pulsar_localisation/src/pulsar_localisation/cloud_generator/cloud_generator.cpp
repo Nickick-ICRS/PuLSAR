@@ -1,11 +1,11 @@
 #include "cloud_generator/cloud_generator.hpp"
 
 CloudGenerator::CloudGenerator(
-    std::vector<std::string> range_topic_names, float history_length,
+    std::vector<std::string> range_topic_names, float cycle_sensor_readings,
     std::string odom_name) 
         :private_nh_("~"), odom_name_(odom_name),
-        tf_buffer_(ros::Duration(history_length)), tf2_(tf_buffer_), 
-        history_length_(history_length)
+        tf_buffer_(ros::Duration(cycle_sensor_readings)), tf2_(tf_buffer_), 
+        cycle_sensor_readings_(cycle_sensor_readings)
 {
     for(std::string name : range_topic_names) {
         range_subs_.emplace_back(
@@ -50,6 +50,16 @@ void CloudGenerator::publish_full_cloud() {
     full_cloud_pub_.publish(convert_cloud(full_cloud_, "map"));
 }
 
+
+const std::vector<sensor_msgs::Range>& CloudGenerator::get_raw_data(
+        std::string robot_name)
+{
+    std::lock_guard<std::recursive_mutex> lock(
+        robot_cloud_muts_[robot_name]);
+    clean_cloud(robot_name);
+    return robot_raw_data_[robot_name];
+}
+
 void CloudGenerator::clean_all_clouds() {
     for(auto & pair : robot_clouds_) {
         std::lock_guard<std::recursive_mutex> lock(
@@ -79,44 +89,28 @@ void CloudGenerator::clean_cloud(std::string name) {
 }
 
 void CloudGenerator::clean_cloud(pcl::PointCloud<pcl::PointXYZI>& cloud) {
-    // Calculate the cutoff point
-    ros::Time cutoff_ros;
-    try {
-        cutoff_ros = (ros::Time::now() - ros::Duration(history_length_));
-    }
-    catch(std::runtime_error) {
-        // This means that history_length_ seconds have not passed yet
+    if(cloud.size() <= cycle_sensor_readings_)
         return;
-    }
-    float cutoff = cutoff_ros.sec + cutoff_ros.nsec / 1e9;
-    // Remove the points which are too old
+    // Remove the points beyond the most recent cycle_sensor_readings_
+    int num = cycle_sensor_readings_;
     for(auto it = cloud.begin(); it != cloud.end(); it++) {
-        if(it->intensity < cutoff) {
+        if(it + num != cloud.end())
             it = --cloud.erase(it);
-        }
+        else
+            return;
     }
 }
 
 void CloudGenerator::clean_cloud(std::vector<sensor_msgs::Range>& cloud) {
-    // Calculate the cutoff point
-    ros::Time cutoff;
-    try {
-        cutoff = (ros::Time::now() - ros::Duration(history_length_));
-    }
-    catch(std::runtime_error) {
-        // This means that history_length_ seconds have not passed yet
+    if(cloud.size() <= cycle_sensor_readings_)
         return;
-    }
-    // Remove the points which are too old
+    // Remove the points beyond the most recent cycle_sensor_readings_
+    int num = cycle_sensor_readings_;
     for(auto it = cloud.begin(); it != cloud.end(); it++) {
-        if(it->header.stamp < cutoff) {
+        if(it + num != cloud.end())
             it = --cloud.erase(it);
-        }
-    }
-    // TODO: Remove this after tests
-    auto it = cloud.begin();
-    while(cloud.size() > 6) {
-        it = cloud.erase(it);
+        else
+            return;
     }
 }
 

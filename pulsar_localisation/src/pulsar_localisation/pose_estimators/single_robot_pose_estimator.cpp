@@ -69,8 +69,6 @@ void SingleRobotPoseEstimator::update_estimate() {
 
     auto tf = calculate_transform(odom);
     tf_broadcaster_.sendTransform(tf);
-    
-    cloud_gen_->clean_cloud(name_);
 }
 
 void SingleRobotPoseEstimator::update_pose_estimate_with_covariance() {
@@ -201,9 +199,11 @@ geometry_msgs::Pose SingleRobotPoseEstimator::sample_motion_model_odometry(
     xt.position.x = xt_1.position.x + sdtrans * cos(tht_1 + sdrot1);
     xt.position.y = xt_1.position.y + sdtrans * sin(tht_1 + sdrot1);
 
+    ROS_INFO_STREAM("sdtr " << sdtrans << " dtr " << dtrans << "\na3 " << a3_ * dtrans * dtrans << " a4_1 " << a4_ * drot1*drot1 << " a4_2 " << a4_*drot2*drot2);
+
+
     double th = quat_to_yaw(xt_1.orientation) + sdrot1 + sdrot2;
     xt.orientation = yaw_to_quat(tht);
-
     return xt;
 }
 
@@ -235,24 +235,24 @@ std::vector<geometry_msgs::Pose>
     geometry_msgs::Pose utp, utp_1;
     utp = ut.pose.pose;
     utp_1 = prev_odom_.pose.pose;
+    prev_odom_ = ut;
+
+    const auto Z = cloud_gen_->get_raw_data(name_);
 
     for(int m = 0; m < M; m++) {
         // Update the motion model
         xt.push_back(sample_motion_model_odometry(utp, utp_1, Xt_1[m]));
         // Update the measurement model
-        wt.push_back(range_model_.model(
-            xt[m], cloud_gen_->get_raw_data(name_), name_, 
-            base_link_frame_));
+        wt.push_back(range_model_.model(xt[m], Z, name_, base_link_frame_));
         wavg += wt[m]/M;
         // Update the cloud + weights
         Xtbar.emplace_back(xt[m], wt[m]);
-        ROS_ERROR_STREAM("\nx: " << xt.back().position.x << " y: " << xt.back().position.y << " yaw: " << 180*quat_to_yaw(xt.back().orientation)/M_PI << " w: " << wt.back());
     }
 
     wslow = wslow + aslow_ * (wavg - wslow);
     wfast = wfast + afast_ * (wavg - wfast);
 
-    ROS_INFO_STREAM("wavg " << wavg << " wslow " << wslow << " wfast " << wfast);
+    ROS_INFO_STREAM("wavg " << wavg << " wfast/wslow " << wfast/wslow);
 
     std::uniform_real_distribution<double> dist(0, 1);
     float wtotal = wavg*M;

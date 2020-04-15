@@ -86,7 +86,7 @@ private:
      * Algorithm parameters *
      * ******************** */
     // How long range data is kept for
-    float history_length_;
+    int cycle_sensor_readings_;
 
     // How many particles are kept in the filter(s) 
     // see SingleRobotPoseEstimator
@@ -133,7 +133,7 @@ LocalisationNode::LocalisationNode() :running_(true) {
         }
     }
 
-    cloud_gen_.reset(new CloudGenerator(all_topics, history_length_));
+    cloud_gen_.reset(new CloudGenerator(all_topics, cycle_sensor_readings_));
 
     map_man_.reset(new MapManager(map_topic_));
 
@@ -153,7 +153,7 @@ LocalisationNode::~LocalisationNode() {
 #include <geometry_msgs/PoseArray.h>
 #include "maths/useful_functions.hpp"
 void LocalisationNode::loop() {
-    ros::Rate sleeper(1.0/2.f);
+    ros::Rate sleeper(2.f);
 
     ros::NodeHandle nh("~");
     ros::Publisher pub = nh.advertise<geometry_msgs::PoseArray>("test", 1);
@@ -171,14 +171,16 @@ void LocalisationNode::loop() {
         x += 0.1;
         p.orientation.w = 1;
     }
+    ros::Duration(1).sleep();
     while(running_) {
         sleeper.sleep();
         cloud_gen_->clean_all_clouds();
+        /*
         for(auto& p : pose_tests) {
             ROS_WARN_STREAM("x: " << p.position.x << " y: " << p.position.y << " w: " << range_model.model(p, cloud_gen_->get_raw_data("pulsar_0"), "pulsar_0", "pulsar_0/base_link"));
         }
+        */
         cloud_gen_->publish_cloud("pulsar_0");
-/*
         pose_est_->robot_pose_estimators_["pulsar_0"]->update_estimate();
         auto& pt = pose_est_->robot_pose_estimators_["pulsar_0"]->get_pose_estimate();
         auto& pts = pose_est_->robot_pose_estimators_["pulsar_0"]->get_pose_estimates();
@@ -188,7 +190,6 @@ void LocalisationNode::loop() {
         }
         c.header.stamp = ros::Time::now();
         pub.publish(c);
-        */
     }
 }
 
@@ -348,12 +349,14 @@ void LocalisationNode::get_ros_parameters() {
     /* ******************** *
      * Algorithm parameters *
      * ******************** */
-    if(!ros::param::param<float>("~history_length", history_length_, 5)) {
+    if(!ros::param::param<int>(
+        "~cycle_sensor_readings", cycle_sensor_readings_, 6)) 
+    {
         ROS_WARN_STREAM(
-           "Failed to get param 'history_length'. Defaulting to: "
-           << history_length_ << ".");
+           "Failed to get param 'cycle_sensor_readings'. Defaulting to: "
+           << cycle_sensor_readings_ << ".");
     }
-    RangeCloudSensorModel::history_length_ = history_length_;
+    RangeCloudSensorModel::cycle_sensor_readings_ = cycle_sensor_readings_;
 
     if(!ros::param::param<float>(
         "~time_resolution", RangeCloudSensorModel::time_resolution_, 1e-2)) 
