@@ -21,11 +21,13 @@ SingleRobotPoseEstimator::SingleRobotPoseEstimator(
     std::string name, const std::shared_ptr<CloudGenerator>& cloud_gen,
     const std::shared_ptr<MapManager>& map_man, std::string map_frame, 
     geometry_msgs::Pose initial_pose, std::string odom_topic,
-    std::string base_link_frame, float radius, unsigned int M)
+    std::string base_link_frame, float radius, unsigned int M,
+    double min_trans_update, double min_rot_update)
     
     :name_(name), cloud_gen_(cloud_gen), map_man_(map_man), rd_(), 
     gen_(rd_()), range_model_(map_frame, map_man), map_frame_(map_frame),
-    base_link_frame_(base_link_frame), radius_(radius), tf_listener_(tf2_)
+    base_link_frame_(base_link_frame), radius_(radius), tf_listener_(tf2_),
+    min_trans_update_(min_trans_update), min_rot_update_(min_rot_update)
 {
     pose_estimate_.pose.pose = initial_pose;
     pose_estimate_.header.frame_id = map_frame;
@@ -57,6 +59,11 @@ void SingleRobotPoseEstimator::update_estimate() {
         std::lock_guard<std::mutex> lock(odom_mut_);
         odom = recent_odom_;
     }
+    // Check that the delta since last update is within acceptable bounds
+    /*
+    if(!check_odometry_delta_size(odom))
+        odom = prev_odom_;
+        */
     // Clean any old data points
     cloud_gen_->clean_cloud(name_);
     // Run an iteration of the augmented MCL filter
@@ -89,8 +96,17 @@ void SingleRobotPoseEstimator::update_pose_estimate_with_covariance() {
     db.run();
 
     std::map<int, std::vector<geometry_msgs::Pose>> clustered_poses;
+    int kept = 0;
     for(const auto& p : db.m_points) {
-        clustered_poses[p.clusterID].push_back(*p.pose);
+        if(p.clusterID != NOISE && p.clusterID != UNCLASSIFIED) {
+            clustered_poses[p.clusterID].push_back(*p.pose);
+            kept++;
+        }
+    }
+    
+    if(!kept) {
+        ROS_WARN_STREAM_THROTTLE(2, "Failed to group any pose estimates.");
+        return;
     }
 
     int best_it = 0;
@@ -186,6 +202,9 @@ geometry_msgs::Pose SingleRobotPoseEstimator::sample_motion_model_odometry(
                         ut.position.x - ut_1.position.x) - tht_1;
     double dtrans = sqrt(pow(ut_1.position.x - ut.position.x, 2) +
                          pow(ut_1.position.y - ut.position.y, 2));
+    if(dtrans <= min_trans_update_) {
+        drot1 = 0;
+    }
     double drot2 = tht - tht_1 - drot1;
 
     double sdrot1 = drot1 - sample_normal_distribution(
@@ -198,9 +217,6 @@ geometry_msgs::Pose SingleRobotPoseEstimator::sample_motion_model_odometry(
     geometry_msgs::Pose xt;
     xt.position.x = xt_1.position.x + sdtrans * cos(tht_1 + sdrot1);
     xt.position.y = xt_1.position.y + sdtrans * sin(tht_1 + sdrot1);
-
-    ROS_INFO_STREAM("sdtr " << sdtrans << " dtr " << dtrans << "\na3 " << a3_ * dtrans * dtrans << " a4_1 " << a4_ * drot1*drot1 << " a4_2 " << a4_*drot2*drot2);
-
 
     double th = quat_to_yaw(xt_1.orientation) + sdrot1 + sdrot2;
     xt.orientation = yaw_to_quat(tht);
@@ -228,6 +244,8 @@ std::vector<geometry_msgs::Pose>
     std::vector<float> wt;
 
     float wavg = 0;
+    float wtotal = 0;
+    double avg_yaw;
     int M = Xt_1.size();
 
     // Transform the odometry message into the most recent map frame
@@ -244,53 +262,90 @@ std::vector<geometry_msgs::Pose>
         xt.push_back(sample_motion_model_odometry(utp, utp_1, Xt_1[m]));
         // Update the measurement model
         wt.push_back(range_model_.model(xt[m], Z, name_, base_link_frame_));
-        wavg += wt[m]/M;
+        wtotal += wt[m];
         // Update the cloud + weights
         Xtbar.emplace_back(xt[m], wt[m]);
+        avg_yaw += quat_to_yaw(xt.back().orientation);
     }
+    avg_yaw /= M;
+    while(avg_yaw > M_PI)  avg_yaw -= 2*M_PI;
+    while(avg_yaw < -M_PI) avg_yaw += 2*M_PI;
+
+    wavg = wtotal / M;
+
+    if(wavg < 1e-06 or std::isnan(wavg)) wavg = 1e-06;
 
     wslow = wslow + aslow_ * (wavg - wslow);
     wfast = wfast + afast_ * (wavg - wfast);
+    if(wfast < 1e-06) wfast = 1e-06;
+    if(wslow < 1e-06) wslow = 1e-06;
 
-    ROS_INFO_STREAM("wavg " << wavg << " wfast/wslow " << wfast/wslow);
-
-    std::uniform_real_distribution<double> dist(0, 1);
-    float wtotal = wavg*M;
+    static std::uniform_real_distribution<double> dist(0, 1);
+    ROS_WARN_STREAM("M: " << M);
     for(int m = 0; m < M; m++) {
-        float p = 1.0 - wfast/wslow;
+        double p = 0.0 - wfast/wslow;
         if(p < 0) p = 0;
         if(dist(gen_) < p) {
             // Add a random pose to Xt - not distributed about our current
             // estimate as this is to try and ensure we don't hit local
-            // minima
-            Xt.push_back(gen_random_valid_pose());
+            // minima. As we have good angular odometry we only want
+            // a random x and y
+            Xt.emplace_back(gen_random_valid_pose_position(avg_yaw));
         }
         else {
             // Place a random point from the cloud into the new one, based
             // on its weight
-            p = dist(gen_) * wtotal;
-            for(const auto& pair : Xtbar) {
-                p -= pair.second;
-                if(p <= 0) {
-                    Xt.emplace_back(map_man_->make_pose_valid(
-                        pair.first, radius_));
-                    break;
+            // While loop just incase somehow we didn't select an item.
+            double p2 = 1;
+            while(p2 > 0) {
+                p2 = dist(gen_) * wtotal;
+                for(const auto& pair : Xtbar) {
+                    p2 -= pair.second;
+                    if(p2 <= 0) {
+                        try {
+                            Xt.emplace_back(map_man_->make_pose_valid(
+                                pair.first, radius_));
+                        }
+                        catch(PoseInvalidException) {
+                            Xt.emplace_back(
+                                gen_random_valid_pose_position(avg_yaw));
+                        }
+                        break;
+                    }
+                }
+                if(p2 > 0) {
+                    ROS_WARN_STREAM(
+                        "augmented_MCL: p2 was above 0... Running "
+                        << "another selection iteration.");
                 }
             }
         }
     }
+    ROS_WARN_STREAM("Xt: " << Xt.size());
 
     return Xt;
 }
 
-geometry_msgs::Pose SingleRobotPoseEstimator::gen_random_valid_pose() {
+geometry_msgs::Pose 
+    SingleRobotPoseEstimator::gen_random_valid_pose_position(double yaw)
+{
     static std::uniform_real_distribution<double> xdist(/*map dims*/-1, 1);
     static std::uniform_real_distribution<double> ydist(/*map dims*/-1, 1);
-    static std::uniform_real_distribution<double> thdist(-M_PI, M_PI);
     geometry_msgs::Pose pose;
+    pose.orientation = yaw_to_quat(yaw);
     do {
         pose.position.x = xdist(gen_);
         pose.position.y = ydist(gen_);
+    }
+    while(!map_man_->is_pose_valid(pose, radius_));
+
+    return pose;
+}
+
+geometry_msgs::Pose SingleRobotPoseEstimator::gen_random_valid_pose() {
+    static std::uniform_real_distribution<double> thdist(-M_PI, M_PI);
+    geometry_msgs::Pose pose(gen_random_valid_pose_position(0));
+    do {
         double th = thdist(gen_);
         pose.orientation = yaw_to_quat(th);
     }
@@ -337,4 +392,23 @@ geometry_msgs::TransformStamped
         pose_estimate_.pose.pose.position.z - odom.pose.pose.position.z;
     tf.transform.rotation = yaw_to_quat(yaw);
     return tf;
+}
+
+bool SingleRobotPoseEstimator::check_odometry_delta_size(
+    const nav_msgs::Odometry& odom)
+{
+    // First check translation
+    double dx = odom.pose.pose.position.x - prev_odom_.pose.pose.position.x;
+    double dy = odom.pose.pose.position.y - prev_odom_.pose.pose.position.y;
+    if(sqrt(dx*dx + dy*dy) > min_trans_update_)
+        return true;
+
+    // Now check rotation
+    double dyaw = quat_to_yaw(odom.pose.pose.orientation) 
+                - quat_to_yaw(prev_odom_.pose.pose.orientation);
+    while(dyaw > M_PI) dyaw -= 2*M_PI;
+    while(dyaw < -M_PI) dyaw += 2*M_PI;
+    if(fabs(dyaw) > min_rot_update_)
+        return true;
+    return false;
 }

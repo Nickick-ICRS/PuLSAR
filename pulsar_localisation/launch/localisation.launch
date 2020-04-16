@@ -20,10 +20,10 @@
         <!-- noise in translation estimate due to translation -->
         <param name="a3" value="0.4"/>
         <!-- noise in translation estimate due to rotation -->
-        <param name="a4" value="0.00005"/>
+        <param name="a4" value="0.00001"/>
         <!-- Exponential parameters for augmented MCL, 0 <= aslow < afast.
              See Probabilistic Robotics by Thrun et al. -->
-        <param name="aslow" value="0.002"/>
+        <param name="aslow" value="0.001"/>
         <param name="afast" value="0.1"/>
 
         <!-- How many sensor data points should be stored for each update
@@ -65,12 +65,18 @@
         <param name="ztime" value="5"/>
 
         <!-- Number of particles to be included in the MCL filter -->
-        <param name="num_particles" value="200"/>
+        <param name="num_particles" value="500"/>
 
         <!-- Minimum number of pose estimates within a cluster to be
              considered as a cluster -->
         <param name="dbscan_min_points" value="5"/>
         <!-- Clustering epsilon parameter (metres^2) -->
         <param name="dbscan_epsilon" value="0.0016"/>
+
+        <!-- Minimum translational motion for a robot to update its filter
+             -->
+        <param name="min_trans_update" value="0.004"/>
+        <!-- Minim rotational motion for a robot to update its filter -->
+        <param name="min_rot_update" value="0.1"/>
     </node>
 </launch>

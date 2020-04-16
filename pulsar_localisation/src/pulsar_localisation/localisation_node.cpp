@@ -91,6 +91,12 @@ private:
     // How many particles are kept in the filter(s) 
     // see SingleRobotPoseEstimator
     int particle_filter_size_;
+
+    // Minimum translation required to run a filter update
+    double min_trans_update_;
+
+    // Minimum rotation required to run a filter update
+    double min_rot_update_;
 };
 
 int main(int argc, char **argv) {
@@ -140,7 +146,7 @@ LocalisationNode::LocalisationNode() :running_(true) {
     pose_est_.reset(new SwarmPoseEstimator(
         cloud_gen_, map_man_, "map", robot_names, initial_pose_estimates_, 
         robot_odom_map, robot_base_link_map, robot_radii_map, 
-        particle_filter_size_));
+        particle_filter_size_, min_trans_update_, min_rot_update_));
 
     main_thread_ = std::thread(&LocalisationNode::loop, this);
 }
@@ -153,7 +159,7 @@ LocalisationNode::~LocalisationNode() {
 #include <geometry_msgs/PoseArray.h>
 #include "maths/useful_functions.hpp"
 void LocalisationNode::loop() {
-    ros::Rate sleeper(2.f);
+    ros::Rate sleeper(5.f);
 
     ros::NodeHandle nh("~");
     ros::Publisher pub = nh.advertise<geometry_msgs::PoseArray>("test", 1);
@@ -494,5 +500,21 @@ void LocalisationNode::get_ros_parameters() {
         ROS_WARN_STREAM(
             "Failed to get param 'dbscan_epsilon'. Defaulting to '"
             << SingleRobotPoseEstimator::dbscan_epsilon_ << "'.");
+    }
+
+    if(!ros::param::param<double>(
+        "~min_trans_update", min_trans_update_, 0.05))
+    {
+        ROS_WARN_STREAM(
+            "Failed to get param 'min_trans_update'. Defaulting to '"
+            << min_trans_update_ << "'.");
+    }
+
+    if(!ros::param::param<double>(
+        "~min_rot_update", min_rot_update_, 0.1))
+    {
+        ROS_WARN_STREAM(
+            "Failed to get param 'min_rot_update'. Defaulting to '"
+            << min_rot_update_ << "'.");
     }
 }

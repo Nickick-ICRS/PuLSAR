@@ -105,9 +105,45 @@ geometry_msgs::Pose MapManager::make_pose_valid(
     if(is_pose_valid(pose, safety_radius))
         return pose;
 
-    // TODO: Either fix this or remove the function entirely
-    return pose;
+    const double DELTA = map_res_;
 
+    double yaw = quat_to_yaw(pose.orientation);
+    double dx = -cos(yaw) * DELTA;
+    double dy = -sin(yaw) * DELTA;
+    geometry_msgs::Pose p(pose);
+    double d = 0;
+    double max_d = sqrt(pow(map_x_, 2) + pow(map_y_, 2));
+    for(d = DELTA; d < safety_radius; d+= DELTA) {
+        p.position.x += dx;
+        p.position.y += dy;
+        d += DELTA;
+        if(is_pose_valid(p, safety_radius))
+            return p;
+    }
+    while(!is_pose_valid(p, safety_radius) && d < max_d) {
+        p.position.x += dx;
+        p.position.y += dy;
+        d += DELTA;
+    }
+
+    if(d >= max_d) {
+        d = 0;
+        p = pose;
+        while(!is_pose_valid(p, safety_radius) && d < max_d) {
+            p.position.x -= dx;
+            p.position.y -= dy;
+            d += DELTA;
+        }
+        if(d >= max_d) {
+            ROS_WARN_STREAM(
+                "Failed to find a valid pose within the map near " << pose);
+            throw PoseInvalidException();
+        }
+    }
+
+    return p;
+
+    /*
     geometry_msgs::Pose ret(pose);
 
     auto checked_tiles = get_tiles(pose.position, safety_radius);
@@ -140,6 +176,7 @@ geometry_msgs::Pose MapManager::make_pose_valid(
     ROS_WARN_STREAM(
         "Failed to find a valid pose within the map near " << pose);
     return pose;
+    */
 }
 
 void MapManager::set_robot_pose(

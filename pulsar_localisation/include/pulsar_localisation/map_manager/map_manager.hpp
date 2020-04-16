@@ -9,6 +9,15 @@
 #include <geometry_msgs/Pose.h>
 
 /**
+ * Exception thrown by MapManager functions.
+ */
+class PoseInvalidException : public std::runtime_error {
+public:    
+    PoseInvalidException() :std::runtime_error(
+        "The supplied pose was invalid.") {};
+};
+
+/**
  * @brief Keeps track of the world map occupancy grid.
  *
  * After a map has been registered, this class keeps track of it. It also

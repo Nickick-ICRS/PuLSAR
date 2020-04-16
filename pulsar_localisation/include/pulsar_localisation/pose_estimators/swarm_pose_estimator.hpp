@@ -47,6 +47,12 @@ public:
      *
      * @param M The number of particles to include in the single robot
      *          pose estimator particle filters.
+     *
+     * @param min_trans_update Minimum distance for robots to move before
+     *                         performing a filter update.
+     *
+     * @param min_rot_update Minimum turning angle for robots to move before
+     *                       performing a filter update.
      */
     SwarmPoseEstimator(
         const std::shared_ptr<CloudGenerator>& cloud_gen,
@@ -55,7 +61,8 @@ public:
         std::map<std::string, geometry_msgs::Pose>& initial_robot_poses,
         std::map<std::string, std::string>& robot_odom_topics,
         std::map<std::string, std::string>& robot_base_links,
-        std::map<std::string, float>& robot_radii, unsigned int M);
+        std::map<std::string, float>& robot_radii, unsigned int M,
+        double min_trans_update, double min_rot_update);
     ~SwarmPoseEstimator();
 
     /**
