@@ -50,15 +50,13 @@ public:
      *
      * @param min_trans_update Minimum distance to travel before running a
      *                         filter update.
-     * @param min_rot_update Minimum angle to turn before running a filter
-     *                       update.
      */
     SingleRobotPoseEstimator(
         std::string name, const std::shared_ptr<CloudGenerator>& cloud_gen,
         const std::shared_ptr<MapManager>& map_man, std::string map_frame, 
         geometry_msgs::Pose initial_pose, std::string odom_topic,
         std::string base_link_frame, float radius, unsigned int M,
-        double min_trans_update, double min_rot_update);
+        double min_trans_update);
     ~SingleRobotPoseEstimator();
     
     /**
@@ -214,18 +212,6 @@ private:
      */
     geometry_msgs::TransformStamped calculate_transform(
         const nav_msgs::Odometry& odom);
-
-    /**
-     * @brief Decides whether we should run a filter update or not.
-     *
-     * Checks whether a large enough translation or rotation has occurred
-     * since the last filter update to run another.
-     *
-     * @param odom The most recent odometry message to perform the check on.
-     *
-     * @return Whether we should (true) run an update or not (false)
-     */
-    bool check_odometry_delta_size(const nav_msgs::Odometry& odom);
 
     std::string name_;
     std::string base_link_frame_;

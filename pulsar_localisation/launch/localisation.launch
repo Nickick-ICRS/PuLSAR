@@ -76,7 +76,7 @@
         <!-- Minimum translational motion for a robot to update its filter
              -->
         <param name="min_trans_update" value="0.004"/>
-        <!-- Minim rotational motion for a robot to update its filter -->
-        <param name="min_rot_update" value="0.1"/>
+        <!-- Update frequency (Hz) of the filter -->
+        <param name="update_rate" value="0.1"/>
     </node>
 </launch>

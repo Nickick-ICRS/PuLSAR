@@ -22,12 +22,12 @@ SingleRobotPoseEstimator::SingleRobotPoseEstimator(
     const std::shared_ptr<MapManager>& map_man, std::string map_frame, 
     geometry_msgs::Pose initial_pose, std::string odom_topic,
     std::string base_link_frame, float radius, unsigned int M,
-    double min_trans_update, double min_rot_update)
+    double min_trans_update)
     
     :name_(name), cloud_gen_(cloud_gen), map_man_(map_man), rd_(), 
     gen_(rd_()), range_model_(map_frame, map_man), map_frame_(map_frame),
     base_link_frame_(base_link_frame), radius_(radius), tf_listener_(tf2_),
-    min_trans_update_(min_trans_update), min_rot_update_(min_rot_update)
+    min_trans_update_(min_trans_update)
 {
     pose_estimate_.pose.pose = initial_pose;
     pose_estimate_.header.frame_id = map_frame;
@@ -59,11 +59,6 @@ void SingleRobotPoseEstimator::update_estimate() {
         std::lock_guard<std::mutex> lock(odom_mut_);
         odom = recent_odom_;
     }
-    // Check that the delta since last update is within acceptable bounds
-    /*
-    if(!check_odometry_delta_size(odom))
-        odom = prev_odom_;
-        */
     // Clean any old data points
     cloud_gen_->clean_cloud(name_);
     // Run an iteration of the augmented MCL filter
@@ -151,6 +146,9 @@ void SingleRobotPoseEstimator::update_pose_estimate_with_covariance() {
 
     // Now calculate the covariance matrix
     auto& cov_mat = pose_estimate_.pose.covariance;
+    // Clear previous covariance values
+    for(int i = 0; i < 36; i++)
+        cov_mat[i] = 0;
     // Sample covariance so reduce n by 1
     n -= 1;
     for(const auto& pose : best_cluster) {
@@ -389,23 +387,4 @@ geometry_msgs::TransformStamped
         pose_estimate_.pose.pose.position.z - odom.pose.pose.position.z;
     tf.transform.rotation = yaw_to_quat(yaw);
     return tf;
-}
-
-bool SingleRobotPoseEstimator::check_odometry_delta_size(
-    const nav_msgs::Odometry& odom)
-{
-    // First check translation
-    double dx = odom.pose.pose.position.x - prev_odom_.pose.pose.position.x;
-    double dy = odom.pose.pose.position.y - prev_odom_.pose.pose.position.y;
-    if(sqrt(dx*dx + dy*dy) > min_trans_update_)
-        return true;
-
-    // Now check rotation
-    double dyaw = quat_to_yaw(odom.pose.pose.orientation) 
-                - quat_to_yaw(prev_odom_.pose.pose.orientation);
-    while(dyaw > M_PI) dyaw -= 2*M_PI;
-    while(dyaw < -M_PI) dyaw += 2*M_PI;
-    if(fabs(dyaw) > min_rot_update_)
-        return true;
-    return false;
 }

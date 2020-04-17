@@ -95,8 +95,8 @@ private:
     // Minimum translation required to run a filter update
     double min_trans_update_;
 
-    // Minimum rotation required to run a filter update
-    double min_rot_update_;
+    // Frequency of filter updates (Hz)
+    double update_rate_hz_;
 };
 
 int main(int argc, char **argv) {
@@ -146,7 +146,7 @@ LocalisationNode::LocalisationNode() :running_(true) {
     pose_est_.reset(new SwarmPoseEstimator(
         cloud_gen_, map_man_, "map", robot_names, initial_pose_estimates_, 
         robot_odom_map, robot_base_link_map, robot_radii_map, 
-        particle_filter_size_, min_trans_update_, min_rot_update_));
+        particle_filter_size_, min_trans_update_));
 
     main_thread_ = std::thread(&LocalisationNode::loop, this);
 }
@@ -157,37 +157,25 @@ LocalisationNode::~LocalisationNode() {
 }
 
 #include <geometry_msgs/PoseArray.h>
-#include "maths/useful_functions.hpp"
 void LocalisationNode::loop() {
-    ros::Rate sleeper(10.f);
+    ros::Rate sleeper(update_rate_hz_);
 
     ros::NodeHandle nh("~");
     ros::Publisher pub = nh.advertise<geometry_msgs::PoseArray>("test", 1);
     geometry_msgs::Point p;
     geometry_msgs::PoseArray c;
     c.header.frame_id = "map";
-    std::random_device r;
-    std::default_random_engine el(r());
-    std::uniform_real_distribution<double> dist(-1, 1);
-    auto& range_model = pose_est_->robot_pose_estimators_["pulsar_0"]->range_model_;
-    geometry_msgs::Pose pose_tests[5];
-    double x = 0;
-    for(auto& p : pose_tests) {
-        p.position.x = x;
-        x += 0.1;
-        p.orientation.w = 1;
-    }
-    ros::Duration(1).sleep();
     while(running_) {
         sleeper.sleep();
-        cloud_gen_->clean_all_clouds();
+        //pose_est_->robot_pose_estimators_["pulsar_0"]->update_estimate();
+        pose_est_->update_estimate();
         cloud_gen_->publish_cloud("pulsar_0");
-        pose_est_->robot_pose_estimators_["pulsar_0"]->update_estimate();
-        auto& pt = pose_est_->robot_pose_estimators_["pulsar_0"]->get_pose_estimate();
-        auto& pts = pose_est_->robot_pose_estimators_["pulsar_0"]->get_pose_estimates();
+        pose_est_->publish_pose_estimate();
+        //auto& pts = pose_est_->robot_pose_estimators_["pulsar_0"]->get_pose_estimates();
+        auto& pts = pose_est_->get_pose_estimates();
         c.poses.clear();
-        for(auto& pose : pts) {
-            c.poses.push_back(pose);
+        for(auto& pair : pts) {
+            c.poses.push_back(pair.second.pose.pose);
         }
         c.header.stamp = ros::Time::now();
         pub.publish(c);
@@ -506,10 +494,10 @@ void LocalisationNode::get_ros_parameters() {
     }
 
     if(!ros::param::param<double>(
-        "~min_rot_update", min_rot_update_, 0.1))
+        "~update_rate", update_rate_hz_, 15))
     {
         ROS_WARN_STREAM(
-            "Failed to get param 'min_rot_update'. Defaulting to '"
-            << min_rot_update_ << "'.");
+            "Failed to get param 'update_rate'. Defaulting to '"
+            << update_rate_hz_ << "'.");
     }
 }

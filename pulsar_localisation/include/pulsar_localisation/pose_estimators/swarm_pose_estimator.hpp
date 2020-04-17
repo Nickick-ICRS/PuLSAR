@@ -50,9 +50,6 @@ public:
      *
      * @param min_trans_update Minimum distance for robots to move before
      *                         performing a filter update.
-     *
-     * @param min_rot_update Minimum turning angle for robots to move before
-     *                       performing a filter update.
      */
     SwarmPoseEstimator(
         const std::shared_ptr<CloudGenerator>& cloud_gen,
@@ -62,7 +59,7 @@ public:
         std::map<std::string, std::string>& robot_odom_topics,
         std::map<std::string, std::string>& robot_base_links,
         std::map<std::string, float>& robot_radii, unsigned int M,
-        double min_trans_update, double min_rot_update);
+        double min_trans_update);
     ~SwarmPoseEstimator();
 
     /**
@@ -76,6 +73,8 @@ public:
 
     /**
      * Get the pose estimates of each robot in the swarm.
+     *
+     * @return Map of the pose estimates, keyed by robot name.
      */
     std::map<std::string, geometry_msgs::PoseWithCovarianceStamped>& get_pose_estimates()
     {
@@ -84,10 +83,17 @@ public:
 
     /**
      * Get the pose estimate of the swarm.
+     *
+     * @return The current pose estimate.
      */
     geometry_msgs::PoseWithCovarianceStamped& get_pose_estimate() {
         return swarm_pose_estimate_;
     };
+
+    /**
+     * Publish the swarm pose estimate.
+     */
+    void publish_pose_estimate();
 private:
     geometry_msgs::PoseWithCovarianceStamped swarm_pose_estimate_;
 
@@ -99,6 +105,9 @@ private:
 
     std::string map_frame_;
     std::shared_ptr<CloudGenerator> cloud_gen_;
+
+    ros::NodeHandle nh_;
+    ros::Publisher pose_pub_;
 
     // For debugging
     friend class LocalisationNode;

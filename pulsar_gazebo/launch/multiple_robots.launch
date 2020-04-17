@@ -17,6 +17,8 @@
     <node name="map_server" pkg="map_server" type="map_server"
           args="$(arg map_file)"/>
 
+    <node name="rviz" pkg="rviz" type="rviz"/>
+
     <node name="spawn_pulsar_script" type="spawn_pulsar_robot.py"
           pkg="pulsar_gazebo" output="screen">
         <rosparam param="x_range">[-1, 1]</rosparam>
