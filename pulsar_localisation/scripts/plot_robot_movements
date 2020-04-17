@@ -1,0 +1,148 @@
+#!/usr/bin/env python
+
+import random
+
+import rospy
+from tf2_ros import TransformListener, Buffer, TransformException
+from nav_msgs.msg import Odometry
+from gazebo_msgs.srv import GetLinkState
+
+import matplotlib.pyplot as plt
+from matplotlib.path import Path
+import matplotlib.patches as patches
+
+import numpy as np
+
+
+tf2 = None
+
+
+fig, ax = plt.subplots()
+
+
+class Route:
+    def __init__(self, name="route"):
+        self._poses = []
+        self._col = (random.random(), random.random(), random.random())
+        self._name = name
+    
+    def add_pos(self, position):
+        self._poses.append(position)
+
+    def plot(self):
+        verts = []
+        codes = []
+        for pos in self._poses:
+            verts.append((pos.x, pos.y))
+            codes.append(Path.LINETO)
+        if not len(codes):
+            return
+        codes[0] = Path.MOVETO
+
+        path = Path(verts, codes)
+        self._patch = patches.PathPatch(
+            path, facecolor='none', lw=2, edgecolor=self._col,
+            label=self._name)
+
+        ax.add_patch(self._patch)
+    
+    def save(self):
+        verts = []
+        for pos in self._poses:
+            verts.append([pos.x, pos.y])
+        verts = np.array(verts)
+        np.savetxt(self._name+"_route_data.txt", verts)
+
+
+class RobotRoutePlotter:
+    def __init__(self, robot_name="pulsar_0"):
+        self._name = robot_name
+        raw_sub = rospy.Subscriber(
+            robot_name+"/odometry/raw", Odometry, self.raw_odom_cb)
+        filtered_sub = rospy.Subscriber(
+            robot_name+"/odometry/filtered", Odometry,
+            self.filtered_odom_cb)
+
+        self._raw_route = Route(name=robot_name+"_raw_odom")
+        self._filtered_route = Route(name=robot_name+"_ekf_odom")
+        self._MCL_route = Route(name=robot_name+"_MCL")
+        self._perfect_route = Route(name=robot_name+"_perfect")
+
+        self._gzservice = rospy.ServiceProxy(
+            "/gazebo/get_link_state", GetLinkState)
+
+    def filtered_odom_cb(self, odom):
+        self._filtered_route.add_pos(odom.pose.pose.position)
+
+    def raw_odom_cb(self, odom):
+        self._raw_route.add_pos(odom.pose.pose.position)
+
+    def MCL_cb(self, trans):
+        self._MCL_route.add_pos(trans.transform.translation)
+
+    def perfect_cb(self, pose):
+        self._perfect_route.add_pos(pose.position)
+
+    def update_route_measurements(self):
+        try:
+            mcl_trans = tf2.lookup_transform(
+                "map", self._name+"/base_link", rospy.Time(0))
+            self.MCL_cb(mcl_trans)
+        except TransformException as e:
+            rospy.logwarn(e)
+
+        perfect_state = self._gzservice(self._name+"::base_link", "world")
+        if not perfect_state.success:
+            rospy.logwarn(
+                "Failed to get transform from 'world' to '" 
+                + perfect_state.link_name + "'.")
+        else:
+            self.perfect_cb(perfect_state.link_state.pose)
+
+    def plot_all_routes(self):
+        self._raw_route.plot()
+        self._filtered_route.plot()
+        self._MCL_route.plot()
+        self._perfect_route.plot()
+    
+    def save_all_routes(self):
+        self._raw_route.save()
+        self._filtered_route.save()
+        self._MCL_route.save()
+        self._perfect_route.save()
+
+
+def main():
+    global tf2
+
+    rospy.init_node("robot_plotter")
+    rospy.wait_for_service("/gazebo/get_link_state")
+
+    tf2 = Buffer()
+    listener = TransformListener(tf2)
+
+    p0 = RobotRoutePlotter("pulsar_0")
+
+    sleeper = rospy.Rate(10)
+    sleeper.sleep()
+
+    try:
+        while not rospy.is_shutdown():
+            sleeper.sleep()
+            p0.update_route_measurements()
+            p0.plot_all_routes()
+            ax.legend()
+            ax.autoscale_view()
+            plt.pause(0.001)
+        print(rospy.Time.now())
+    finally:
+        p0.save_all_routes()
+    
+    print("Finished plotting!")
+    plt.show()
+
+if __name__ == '__main__':
+    try:
+        main()
+    except rospy.ROSInterruptException:
+        pass

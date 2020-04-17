@@ -159,7 +159,7 @@ LocalisationNode::~LocalisationNode() {
 #include <geometry_msgs/PoseArray.h>
 #include "maths/useful_functions.hpp"
 void LocalisationNode::loop() {
-    ros::Rate sleeper(5.f);
+    ros::Rate sleeper(10.f);
 
     ros::NodeHandle nh("~");
     ros::Publisher pub = nh.advertise<geometry_msgs::PoseArray>("test", 1);
@@ -181,11 +181,6 @@ void LocalisationNode::loop() {
     while(running_) {
         sleeper.sleep();
         cloud_gen_->clean_all_clouds();
-        /*
-        for(auto& p : pose_tests) {
-            ROS_WARN_STREAM("x: " << p.position.x << " y: " << p.position.y << " w: " << range_model.model(p, cloud_gen_->get_raw_data("pulsar_0"), "pulsar_0", "pulsar_0/base_link"));
-        }
-        */
         cloud_gen_->publish_cloud("pulsar_0");
         pose_est_->robot_pose_estimators_["pulsar_0"]->update_estimate();
         auto& pt = pose_est_->robot_pose_estimators_["pulsar_0"]->get_pose_estimate();
