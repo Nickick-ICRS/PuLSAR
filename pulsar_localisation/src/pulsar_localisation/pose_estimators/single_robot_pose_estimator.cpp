@@ -281,7 +281,6 @@ std::vector<geometry_msgs::Pose>
     if(wslow < 1e-06) wslow = 1e-06;
 
     static std::uniform_real_distribution<double> dist(0, 1);
-    ROS_WARN_STREAM("M: " << M);
     for(int m = 0; m < M; m++) {
         double p = 0.0 - wfast/wslow;
         if(p < 0) p = 0;
@@ -297,31 +296,29 @@ std::vector<geometry_msgs::Pose>
             // on its weight
             // While loop just incase somehow we didn't select an item.
             double p2 = 1;
-            while(p2 > 0) {
-                p2 = dist(gen_) * wtotal;
-                for(const auto& pair : Xtbar) {
-                    p2 -= pair.second;
-                    if(p2 <= 0) {
-                        try {
-                            Xt.emplace_back(map_man_->make_pose_valid(
-                                pair.first, radius_));
-                        }
-                        catch(PoseInvalidException) {
-                            Xt.emplace_back(
-                                gen_random_valid_pose_position(avg_yaw));
-                        }
-                        break;
+            p2 = dist(gen_) * wtotal;
+            for(const auto& pair : Xtbar) {
+                p2 -= pair.second;
+                if(p2 <= 0) {
+                    try {
+                        Xt.emplace_back(map_man_->make_pose_valid(
+                            pair.first, radius_));
                     }
+                    catch(PoseInvalidException) {
+                        Xt.emplace_back(
+                            gen_random_valid_pose_position(avg_yaw));
+                    }
+                    break;
                 }
-                if(p2 > 0) {
-                    ROS_WARN_STREAM(
-                        "augmented_MCL: p2 was above 0... Running "
-                        << "another selection iteration.");
-                }
+            }
+            if(p2 > 0) {
+                ROS_WARN_STREAM(
+                    "augmented_MCL: p2 was above 0...");
+                Xt.emplace_back(map_man_->make_pose_valid(
+                    Xtbar.back().first, radius_));
             }
         }
     }
-    ROS_WARN_STREAM("Xt: " << Xt.size());
 
     return Xt;
 }

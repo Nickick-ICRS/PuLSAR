@@ -182,11 +182,19 @@ float RangeCloudSensorModel::model(
 */
 
         // Update the total probability
-        q *= prob;
+        if(!std::isfinite(prob)) {
+            ROS_ERROR_STREAM("nan");
+            ROS_INFO_STREAM("prob: " << prob << " phit: " << phit(z, ideal_z)
+                << " pshort " << pshort(z, ideal_z) << " pmax " << pmax(z)
+                << " prand " << prand(z) << " z " << z.range << " iz " << ideal_z);
+        }
+            q *= prob;
     }
     if(q > 100) {
 //        ROS_WARN_STREAM("q > 100: " << q);
     }
+
+
     return q;
 }
 
@@ -199,6 +207,11 @@ float RangeCloudSensorModel::phit(
     double a = 0.5*erf(sqrt(0.5)*(z.max_range - ideal_z)/sigmahit_);
     double b = 0.5*erf(sqrt(0.5)*(0 - ideal_z)/sigmahit_);
     double eta = 1.0/(a - b);
+
+    if(std::isinf(eta)) {
+        // A large number
+        eta = 1e50;
+    }
 
     double sigmahit2 = pow(sigmahit_, 2);
     a = 1/sqrt(2*M_PI*sigmahit2);
