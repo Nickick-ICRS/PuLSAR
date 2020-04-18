@@ -10,12 +10,8 @@
 
 #include <ros/ros.h>
 #include <sensor_msgs/Range.h>
-#include <sensor_msgs/PointCloud2.h>
+#include <sensor_msgs/PointCloud.h>
 #include <geometry_msgs/PointStamped.h>
-
-#include <pcl_conversions/pcl_conversions.h>
-#include <pcl/point_cloud.h>
-#include <pcl/point_types.h>
 
 #include <tf2_ros/transform_listener.h>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
@@ -60,11 +56,6 @@ public:
     void publish_cloud(std::string name);
 
     /**
-     * Publishes the full point cloud including data from each robot.
-     */
-    void publish_full_cloud();
-
-    /**
      * @brief Updates all point clouds by removing old data.
      *
      * Updates all point clouds by removing any points with intensity values
@@ -90,18 +81,8 @@ public:
      * @return The data.
      */
     const std::vector<sensor_msgs::Range>& get_raw_data(
-        std::string robot_name) ;
+        std::string robot_name);
 private:
-    /**
-     * @brief Updates a single point cloud by removing old data.
-     *
-     * Updates a single point cloud by removing any points with intensity
-     * values lower than the current time - cycle_sensor_readings_.
-     *
-     * @param cloud The point cloud to be updated.
-     */
-    void clean_cloud(pcl::PointCloud<pcl::PointXYZI>& cloud);
-
     /**
      * @brief Updates a single raw data cloud by removing old data.
      *
@@ -119,39 +100,15 @@ private:
      */
     void range_cb(const sensor_msgs::RangeConstPtr& msg);
 
-    /**
-     * Converts a pcl point cloud to a ROS point cloud for publishing.
-     *
-     * @param cloud Reference to the cloud to be converted.
-     *
-     * @param frame_name The tf frame the cloud is in, so that the ROS
-     *                   message can be filled out properly.
-     *
-     * @return The ROS PointCloud2 for publishing.
-     */
-    sensor_msgs::PointCloud2 convert_cloud(
-        const pcl::PointCloud<pcl::PointXYZI>& cloud,
-        std::string frame_name);
-
     ros::NodeHandle nh_;
     ros::NodeHandle private_nh_;
     std::vector<ros::Subscriber> range_subs_;
     std::map<std::string, ros::Publisher> cloud_pubs_;
-    ros::Publisher full_cloud_pub_;
 
     tf2_ros::Buffer tf_buffer_;
     tf2_ros::TransformListener tf2_;
 
-    /**
-     * We use a PointXYZI so that we can store data timestamps in the
-     * intensity field - essentially, the newer the data, the more we care
-     * about it.
-     */
-    pcl::PointCloud<pcl::PointXYZI> full_cloud_;
-    std::map<std::string, pcl::PointCloud<pcl::PointXYZI>> robot_clouds_;
     std::map<std::string, std::vector<sensor_msgs::Range>> robot_raw_data_;
-    // Mutexes for thread safety
-    std::mutex full_cloud_mut_;
     /**
      * std::recursive_mutex is used here as there may be some functions
      * which lock and then call another function which also locks. This

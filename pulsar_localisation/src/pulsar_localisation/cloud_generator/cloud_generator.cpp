@@ -11,9 +11,6 @@ CloudGenerator::CloudGenerator(
         range_subs_.emplace_back(
             nh_.subscribe(name, 1, &CloudGenerator::range_cb, this));
     }
-
-    full_cloud_pub_ = private_nh_.advertise<sensor_msgs::PointCloud2>(
-        "full_point_cloud", 1);
 }
 
 CloudGenerator::~CloudGenerator() {
@@ -21,11 +18,9 @@ CloudGenerator::~CloudGenerator() {
 }
 
 void CloudGenerator::publish_cloud(std::string name) {
-    // Initialise reference with a cloud we know exists
-    pcl::PointCloud<pcl::PointXYZI>& cloud = full_cloud_;
-    std::lock_guard<std::recursive_mutex> lock(robot_cloud_muts_[name]);
+    std::vector<sensor_msgs::Range> *data;
     try {
-        cloud = robot_clouds_.at(name);
+        data = &robot_raw_data_.at(name);
     }
     catch(std::out_of_range) {
         ROS_WARN_STREAM_DELAYED_THROTTLE(5, 
@@ -33,23 +28,37 @@ void CloudGenerator::publish_cloud(std::string name) {
             << "' have data stored within the cloud generator.");
         return;
     }
+    
     ros::Publisher *pub;
     try {
         pub = &cloud_pubs_.at(name);
     }
     catch(std::out_of_range) {
-        cloud_pubs_[name] = private_nh_.advertise<sensor_msgs::PointCloud2>(
+        cloud_pubs_[name] = private_nh_.advertise<sensor_msgs::PointCloud>(
             name + "_point_cloud", 1);
         pub = &cloud_pubs_.at(name);
     }
-    pub->publish(convert_cloud(cloud, name + '/' + odom_name_));
+    sensor_msgs::PointCloud cloud;
+    std::string odom = name + '/' + odom_name_;
+    for(const auto& z : *data) {
+        geometry_msgs::PointStamped p;
+        geometry_msgs::Point32 p32;
+        p.point.x = z.range;
+        p.header = z.header;
+        try {
+            tf_buffer_.transform(p, p, odom);
+        }
+        catch(tf2::TransformException &ex) {
+            ROS_WARN("Failed to transform point: %s\n", ex.what());
+            continue;
+        }
+        p32.x = p.point.x; p32.y = p.point.y; p32.z = p.point.z;
+        cloud.points.push_back(p32);
+    }
+    cloud.header.frame_id = odom;
+    cloud.header.stamp = ros::Time::now();
+    pub->publish(cloud);
 }
-
-void CloudGenerator::publish_full_cloud() {
-    std::lock_guard<std::mutex> lock(full_cloud_mut_);
-    full_cloud_pub_.publish(convert_cloud(full_cloud_, "map"));
-}
-
 
 const std::vector<sensor_msgs::Range>& CloudGenerator::get_raw_data(
         std::string robot_name)
@@ -61,44 +70,17 @@ const std::vector<sensor_msgs::Range>& CloudGenerator::get_raw_data(
 }
 
 void CloudGenerator::clean_all_clouds() {
-    for(auto & pair : robot_clouds_) {
+    for(auto & pair : robot_raw_data_) {
         std::lock_guard<std::recursive_mutex> lock(
             robot_cloud_muts_[pair.first]);
         clean_cloud(pair.second);
     }
-    std::lock_guard<std::mutex> lock(full_cloud_mut_);
-    clean_cloud(full_cloud_);
 }
 
 void CloudGenerator::clean_cloud(std::string name) {
-    // Initialise reference with a cloud we know exists
-    pcl::PointCloud<pcl::PointXYZI>& cloud = full_cloud_;
-    try {
-        cloud = robot_clouds_.at(name);
-    }
-    catch(std::out_of_range) {
-        ROS_WARN_STREAM_DELAYED_THROTTLE(5, 
-            "[CloudGenerator]: No robots with name '" << name 
-            << "' have data stored within the cloud generator.");
-        return;
-    }
-    std::vector<sensor_msgs::Range>& range = robot_raw_data_[name];
     std::lock_guard<std::recursive_mutex> lock(robot_cloud_muts_[name]);
-    clean_cloud(cloud);
+    std::vector<sensor_msgs::Range>& range = robot_raw_data_[name];
     clean_cloud(range);
-}
-
-void CloudGenerator::clean_cloud(pcl::PointCloud<pcl::PointXYZI>& cloud) {
-    if(cloud.size() <= cycle_sensor_readings_)
-        return;
-    // Remove the points beyond the most recent cycle_sensor_readings_
-    int num = cycle_sensor_readings_;
-    for(auto it = cloud.begin(); it != cloud.end(); it++) {
-        if(it + num != cloud.end())
-            it = --cloud.erase(it);
-        else
-            return;
-    }
 }
 
 void CloudGenerator::clean_cloud(std::vector<sensor_msgs::Range>& cloud) {
@@ -135,42 +117,6 @@ void CloudGenerator::range_cb(const sensor_msgs::RangeConstPtr& msg) {
         if(!prefix.empty() && prefix[0] == '/')
             prefix.erase(prefix.begin());
     }
-
-    // Transform the point from the range finder frame into the cloud frame
-    std::string odom = prefix + '/' + odom_name_;
-    geometry_msgs::PointStamped point;
-    geometry_msgs::PointStamped point2;
-    point2.header = msg->header;
-    point2.point.x = msg->range;
-    try {
-        tf_buffer_.transform(point2, point, odom);
-    }
-    catch(tf2::TransformException &ex) {
-        ROS_WARN("Failed to transform point: %s\n", ex.what());
-        return;
-    }
-
-    // Add the point to the point cloud
-    pcl::PointXYZI pcl_point;
-    pcl_point.x = point.point.x;
-    pcl_point.y = point.point.y;
-    pcl_point.z = point.point.z;
-    pcl_point.intensity = 
-        point.header.stamp.sec + point.header.stamp.nsec / 1e9;
     std::lock_guard<std::recursive_mutex> lock(robot_cloud_muts_[prefix]);
-    robot_clouds_[prefix].push_back(pcl_point);
     robot_raw_data_[prefix].push_back(*msg);
-
-    // TODO: Add the point to the full cloud
-}
-
-sensor_msgs::PointCloud2 CloudGenerator::convert_cloud(
-        const pcl::PointCloud<pcl::PointXYZI>& cloud,
-        std::string frame_name)
-{
-    sensor_msgs::PointCloud2 ros_cloud;
-    pcl::toROSMsg(cloud, ros_cloud);
-    ros_cloud.header.stamp = ros::Time::now();
-    ros_cloud.header.frame_id = frame_name;
-    return ros_cloud;
 }

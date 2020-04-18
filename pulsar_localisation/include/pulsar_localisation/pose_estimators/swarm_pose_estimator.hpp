@@ -3,6 +3,7 @@
 
 #include <map>
 #include <memory>
+#include <thread>
 
 #include <ros/ros.h>
 #include <geometry_msgs/Pose.h>
@@ -95,6 +96,14 @@ public:
      */
     void publish_pose_estimate();
 private:
+    /**
+     * @brief Calculate pose estimate covariance.
+     *
+     * After the individual pose estimators have been updated, this function
+     * is called to calculate the average pose and accompanying covariance.
+     */
+    void update_estimate_covariance();
+
     geometry_msgs::PoseWithCovarianceStamped swarm_pose_estimate_;
 
     std::map<std::string, geometry_msgs::PoseWithCovarianceStamped>
@@ -102,6 +111,8 @@ private:
 
     std::map<std::string, std::shared_ptr<SingleRobotPoseEstimator>>
         robot_pose_estimators_;
+
+    std::map<std::string, std::thread> worker_threads_;
 
     std::string map_frame_;
     std::shared_ptr<CloudGenerator> cloud_gen_;

@@ -159,6 +159,7 @@ LocalisationNode::~LocalisationNode() {
 #include <geometry_msgs/PoseArray.h>
 void LocalisationNode::loop() {
     ros::Rate sleeper(update_rate_hz_);
+    ROS_INFO_STREAM("Sleeper freq: " << update_rate_hz_);
 
     ros::NodeHandle nh("~");
     ros::Publisher pub = nh.advertise<geometry_msgs::PoseArray>("test", 1);

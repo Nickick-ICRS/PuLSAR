@@ -162,24 +162,6 @@ float RangeCloudSensorModel::model(
         float prob = zhit_*phit(z, ideal_z) + zshort_*pshort(z, ideal_z)
                    + zmax_*pmax(z) + zrand_*prand(z);
         prob /= zhit_+zshort_+zmax_+zrand_;
-        /*
-        ROS_INFO_STREAM("prob: " << prob << " phit: " << phit(z, ideal_z)
-            << " pshort " << pshort(z, ideal_z) << " pmax " << pmax(z)
-            << " prand " << prand(z) << " z " << z.range << " iz " << ideal_z);
-        */
-
-/*
-        // Older points are less reliable, so increase the probability of
-        // them being 'correct' such that they have less of a negative
-        // effect on the overall probability
-        auto dur = now - z.header.stamp;
-        double frac = (dur.sec + dur.nsec / 1e9) / cycle_sensor_readings_;
-        if(z.header.stamp >= now - ros::Duration(0.2))
-            frac = 0;
-        frac = exp(-ztime_ * frac);
-        prob = 1 - frac + frac * prob;
-//        ROS_INFO_STREAM("T: " << dur << " f: " << frac << " p: " << prob);
-*/
 
         // Update the total probability
         if(!std::isfinite(prob)) {
@@ -190,11 +172,6 @@ float RangeCloudSensorModel::model(
         }
             q *= prob;
     }
-    if(q > 100) {
-//        ROS_WARN_STREAM("q > 100: " << q);
-    }
-
-
     return q;
 }
 

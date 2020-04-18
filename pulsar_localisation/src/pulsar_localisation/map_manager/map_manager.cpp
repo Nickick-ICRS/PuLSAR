@@ -135,48 +135,11 @@ geometry_msgs::Pose MapManager::make_pose_valid(
             d += DELTA;
         }
         if(d >= max_d) {
-            ROS_WARN_STREAM(
-                "Failed to find a valid pose within the map near " << pose);
             throw PoseInvalidException();
         }
     }
 
     return p;
-
-    /*
-    geometry_msgs::Pose ret(pose);
-
-    auto checked_tiles = get_tiles(pose.position, safety_radius);
-    float radius = safety_radius;
-    // Try poses in a slowly increasing radius
-    while(radius < map_width_) {
-        radius += map_res_;
-        auto tiles = get_tiles(pose.position, radius);
-        // Remove tiles already checked
-        for(auto it = tiles.begin(); it != tiles.end(); it++) {
-            bool check = true;
-            for(const auto& t : checked_tiles) {
-                if(*it == t) {
-                    check = false;
-                    break;
-                }
-            }
-            if(check) {
-                int x = *it % map_width_;
-                int y = *it / map_width_;
-                double x2 = (cos(map_th_)*x - sin(map_th_)*y) * map_res_;
-                double y2 = (sin(map_th_)*x + cos(map_th_)*y) * map_res_;
-                ret.position.x = x2 + map_x_;
-                ret.position.y = y2 + map_y_;
-                if(is_pose_valid(ret, safety_radius))
-                    return ret;
-            }
-        }
-    }
-    ROS_WARN_STREAM(
-        "Failed to find a valid pose within the map near " << pose);
-    return pose;
-    */
 }
 
 void MapManager::set_robot_pose(

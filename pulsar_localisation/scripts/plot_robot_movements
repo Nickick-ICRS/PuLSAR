@@ -121,7 +121,12 @@ def main():
     tf2 = Buffer()
     listener = TransformListener(tf2)
 
-    p0 = RobotRoutePlotter("pulsar_0")
+    num_robots = rospy.get_param("~num_robots", 1)
+    robot_prefix = rospy.get_param("~robot_prefix", "pulsar_")
+
+    plotters = []
+    for i in range(num_robots):
+        plotters.append(RobotRoutePlotter(robot_prefix + str(i)))
 
     sleeper = rospy.Rate(10)
     sleeper.sleep()
@@ -129,14 +134,15 @@ def main():
     try:
         while not rospy.is_shutdown():
             sleeper.sleep()
-            p0.update_route_measurements()
-            p0.plot_all_routes()
+            for plotter in plotters:
+                plotter.update_route_measurements()
+                plotter.plot_all_routes()
             ax.legend()
             ax.autoscale_view()
             plt.pause(0.001)
-        print(rospy.Time.now())
     finally:
-        p0.save_all_routes()
+        for plotter in plotters:
+            plotter.save_all_routes()
     
     print("Finished plotting!")
     plt.show()

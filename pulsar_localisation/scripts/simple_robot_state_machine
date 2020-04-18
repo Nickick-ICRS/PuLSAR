@@ -192,11 +192,16 @@ def main():
     data = dict()
     rospy.init_node("basic_state_machine")
 
-    rospy.Subscriber("/pulsar_0/left_range_finder/range", Range, range_cb)
-    rospy.Subscriber("/pulsar_0/middle_range_finder/range", Range, range_cb)
-    rospy.Subscriber("/pulsar_0/right_range_finder/range", Range, range_cb)
+    robot_ns = rospy.get_param("~robot_ns", "pulsar_0")
 
-    pub = rospy.Publisher("/pulsar_0/cmd_vel", Twist, queue_size=1)
+    rospy.Subscriber(
+        "/"+robot_ns+"/left_range_finder/range", Range, range_cb)
+    rospy.Subscriber(
+        "/"+robot_ns+"/middle_range_finder/range", Range, range_cb)
+    rospy.Subscriber(
+        "/"+robot_ns+"/right_range_finder/range", Range, range_cb)
+
+    pub = rospy.Publisher("/"+robot_ns+"/cmd_vel", Twist, queue_size=1)
 
     state = PAUSED
     

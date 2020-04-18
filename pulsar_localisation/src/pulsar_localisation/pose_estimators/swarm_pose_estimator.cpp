@@ -25,6 +25,7 @@ SwarmPoseEstimator::SwarmPoseEstimator(
             robot_radii[name], M, min_trans_update));
         robot_pose_estimates_[name] = 
             robot_pose_estimators_[name]->get_pose_estimate();
+        worker_threads_[name] = std::thread();
     }
 
     swarm_pose_estimate_.header.frame_id = map_frame;
@@ -35,14 +36,27 @@ SwarmPoseEstimator::~SwarmPoseEstimator() {
 }
 
 void SwarmPoseEstimator::update_estimate() {
+    // Run all the update functions in threads
+    for(auto& pair : worker_threads_) {
+        pair.second = std::thread(
+            &SingleRobotPoseEstimator::update_estimate,
+            robot_pose_estimators_[pair.first]);
+    }
+    for(auto& pair : worker_threads_) {
+        pair.second.join();
+    }
+    update_estimate_covariance();
+}
+
+void SwarmPoseEstimator::update_estimate_covariance() {
     // For calculating avg pose
     geometry_msgs::PoseWithCovariance avg_pose;
     auto& pos = avg_pose.pose.position;
     double avg_yaw;
-    for(const auto& est : robot_pose_estimators_) {
-        est.second->update_estimate();
-        robot_pose_estimates_[est.first] = est.second->get_pose_estimate();
-        const auto& pose = robot_pose_estimates_[est.first].pose.pose;
+    for(const auto& pair : robot_pose_estimators_) {
+        robot_pose_estimates_[pair.first] = 
+            pair.second->get_pose_estimate();
+        const auto& pose = robot_pose_estimates_[pair.first].pose.pose;
         // Store new pose estimate
         // Calculate average
         pos.x += pose.position.x;

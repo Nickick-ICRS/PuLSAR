@@ -112,7 +112,6 @@ void SingleRobotPoseEstimator::update_pose_estimate_with_covariance() {
             max_size = pair.second.size();
             best_it = pair.first;
         }
-        ROS_INFO_STREAM("Got cluster of size " << pair.second.size());
     }
 
     auto& best_cluster = clustered_poses[best_it];
@@ -310,8 +309,6 @@ std::vector<geometry_msgs::Pose>
                 }
             }
             if(p2 > 0) {
-                ROS_WARN_STREAM(
-                    "augmented_MCL: p2 was above 0...");
                 Xt.emplace_back(map_man_->make_pose_valid(
                     Xtbar.back().first, radius_));
             }

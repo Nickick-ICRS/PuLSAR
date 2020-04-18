@@ -5,6 +5,7 @@
     <arg name="start_y" default="0"/>
     <arg name="start_yaw" default="0"/>
     <arg name="start_z" value="0.02"/>
+    <arg name="run_state_machine" default="true"/>
 
     <arg name="map_file" default="$(find pulsar_gazebo)/maps/map.yaml"/>
 
@@ -42,6 +43,14 @@
         <!-- Spawn the robot -->
         <node name="spawn_robot" pkg="gazebo_ros" type="spawn_model" output="screen"
               args="-param robot_description -urdf -model $(arg robot_ns) -x $(arg start_x) -y $(arg start_y) -z $(arg start_z) -Y $(arg start_yaw)"/>
+
+        <!-- Run the state machine -->
+        <group if="$(arg run_state_machine)">
+            <node name="state_machine" pkg="pulsar_localisation" 
+                  type="simple_robot_state_machine">
+                <param name="robot_ns" value="$(arg robot_ns)"/>
+            </node>
+        </group>
 
         <!-- Temporary ROS EKF until we fix the custom one -->
         <node name="ekf" pkg="robot_localization" type="ekf_localization_node">

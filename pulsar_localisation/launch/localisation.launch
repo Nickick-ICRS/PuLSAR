@@ -77,6 +77,6 @@
              -->
         <param name="min_trans_update" value="0.004"/>
         <!-- Update frequency (Hz) of the filter -->
-        <param name="update_rate" value="0.1"/>
+        <param name="update_rate" value="15"/>
     </node>
 </launch>
