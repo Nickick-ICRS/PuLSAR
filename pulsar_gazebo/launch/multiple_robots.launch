@@ -1,6 +1,8 @@
 <launch>
     <arg name="num_robots" default="5"/>
     <arg name="map_file" default="$(find pulsar_gazebo)/maps/map.yaml"/>
+    <arg name="state_machine_type" default="default"/>
+    <arg name="run_state_machine" default="true"/>
 
     <include file="$(find gazebo_ros)/launch/empty_world.launch">
         <arg name="world_name"
@@ -17,7 +19,9 @@
     <node name="map_server" pkg="map_server" type="map_server"
           args="$(arg map_file)"/>
 
-    <node name="rviz" pkg="rviz" type="rviz"/>
+    <node name="rviz" pkg="rviz" type="rviz">
+        <remap from="clicked_point" to="swarm_target_point"/>
+    </node>
 
     <node name="spawn_pulsar_script" type="spawn_pulsar_robot.py"
           pkg="pulsar_gazebo" output="screen">
@@ -25,5 +29,7 @@
         <rosparam param="y_range">[-1, 1]</rosparam>
         <param name="num_robots" value="$(arg num_robots)"/>
         <param name="robot_prefix" value="pulsar"/>
+        <param name="run_state_machine" value="$(arg run_state_machine)"/>
+        <param name="state_machine_type" value="$(arg state_machine_type)"/>
     </node>
 </launch>

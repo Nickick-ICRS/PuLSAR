@@ -89,7 +89,9 @@ def update_map_with_robot(x, y):
                     (col+c2)*map_grid.info.height + (row+r2)] = 100
 
 
-def spawn_robot(uuid, launch_file_path, x_range, y_range, ns):
+def spawn_robot(
+    uuid, launch_file_path, x_range, y_range, ns, run_sm, sm_type):
+
     while not rospy.is_shutdown():
         sx = random.uniform(x_range[0], x_range[1]) 
         sy = random.uniform(y_range[0], y_range[1]) 
@@ -108,7 +110,9 @@ def spawn_robot(uuid, launch_file_path, x_range, y_range, ns):
                 "start_x:={}".format(sx),
                 "start_y:={}".format(sy),
                 "start_yaw:={}".format(syaw),
-                "robot_ns:={}".format(ns)]
+                "robot_ns:={}".format(ns),
+                "run_state_machine:={}".format(str(run_sm)),
+                "state_machine_type:={}".format(sm_type)]
     launch_file = [(roslaunch.rlutil.resolve_launch_arguments(
         cli_args)[0], cli_args[1:])]
     launch = roslaunch.parent.ROSLaunchParent(uuid, launch_file)
@@ -165,8 +169,24 @@ def get_params():
         rospy.logwarn(
             "Failed to get param 'robot_radius', defaulting to {}".format(
                 robot_radius))
+
+    try:
+        state_machine_type = rospy.get_param("~state_machine_type")
+    except KeyError:
+        state_machine_type = "default"
+        rospy.logwarn(
+            "Failed to get param 'state_machine_type', defaulting to {}"
+            .format(state_machine_type))
+
+    try:
+        run_sm = rospy.get_param("~run_state_machine")
+    except KeyError:
+        run_sm = True
+        rospy.logwarn(
+            "Failed to get param 'run_state_machine', defaulting to {}"
+            .format("true" if run_sm else "false"))
         
-    return x_range, y_range, num_robots, robot_prefix, robot_radius
+    return x_range, y_range, num_robots, robot_prefix, robot_radius, run_sm, state_machine_type
 
 
 def map_cb(msg):
@@ -190,7 +210,7 @@ def main():
     map_grid = None
     rospy.Subscriber("/map", OccupancyGrid, map_cb)
 
-    x_range, y_range, num_robots, robot_prefix, robot_radius = get_params()
+    x_range, y_range, num_robots, robot_prefix, robot_radius, run_sm, sm_type = get_params()
 
     rospack = rospkg.RosPack()
     launch_file_path = os.path.join(
@@ -207,7 +227,9 @@ def main():
 
     for i in range(num_robots):
         robot_name = robot_prefix + "_{}".format(i)
-        spawn_robot(uuid, launch_file_path, x_range, y_range, robot_name)
+        spawn_robot(
+            uuid, launch_file_path, x_range, y_range, robot_name, run_sm, 
+            sm_type)
 
     unpause_gazebo()
 

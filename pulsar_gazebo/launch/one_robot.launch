@@ -6,6 +6,7 @@
     <arg name="start_yaw" default="0"/>
     <arg name="start_z" value="0.02"/>
     <arg name="run_state_machine" default="true"/>
+    <arg name="state_machine_type" default="default"/>
 
     <arg name="map_file" default="$(find pulsar_gazebo)/maps/map.yaml"/>
 
@@ -46,9 +47,13 @@
 
         <!-- Run the state machine -->
         <group if="$(arg run_state_machine)">
-            <node name="state_machine" pkg="pulsar_localisation" 
-                  type="simple_robot_state_machine">
+            <node name="$(arg state_machine_type)_state_machine" 
+                  pkg="pulsar_state_machines" type="state_machine">
                 <param name="robot_ns" value="$(arg robot_ns)"/>
+                <param name="state_machine"
+                       value="$(arg state_machine_type)"/>
+                <param name="update_freq" value="20"/>
+                <param name="start_delay" value="5"/>
             </node>
         </group>
 

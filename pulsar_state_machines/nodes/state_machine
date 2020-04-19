@@ -1,0 +1,36 @@
+#!/usr/bin/env python
+
+import rospy
+
+from pulsar_state_machines.robot_state_machine import RobotStateMachine
+from pulsar_state_machines.group_target_state_machine import GroupTargetStateMachine
+
+
+DEFAULT_MACHINE = "default"
+GROUP_TARGET_MACHINE = "group_target"
+
+
+def main():
+    rospy.init_node("state_machine")
+
+    machine_type = rospy.get_param("~state_machine", "default")
+    ns = rospy.get_param("~robot_ns", "pulsar_0")
+    freq = rospy.get_param("~update_freq", 10)
+    delay = rospy.get_param("~start_delay", 0)
+    machine = None
+    if machine_type == DEFAULT_MACHINE:
+        machine = RobotStateMachine(ns)
+    elif machine_type == GROUP_TARGET_MACHINE:
+        machine = GroupTargetStateMachine(ns)
+    else:
+        rospy.logerr("Got unrecognised state machine: " + str(machine_type))
+        return
+    rospy.sleep(delay)
+    machine.update_loop(freq, debug=True)
+
+
+if __name__ == '__main__':
+    try:
+        main()
+    except rospy.ROSInterruptException:
+        pass
