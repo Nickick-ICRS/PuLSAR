@@ -1,0 +1,142 @@
+#!/usr/bin/env python
+
+import math
+
+import rospy
+import tf2_ros
+
+from geometry_msgs.msg import PoseWithCovarianceStamped, Quaternion, TransformStamped
+from gazebo_msgs.srv import GetLinkState
+
+
+def quat_to_yaw(quat):
+    yaw = math.acos(quat.w) * (-2 if quat.z < 0 else 2)
+    return yaw
+
+
+def yaw_to_quat(yaw):
+    quat = Quaternion()
+    quat.w = math.cos(yaw/2)
+    quat.z = math.sin(yaw/2)
+    return quat
+
+
+def calc_pose_with_cov(poses):
+    avg_x = 0
+    avg_y = 0
+    avg_z = 0
+    n = len(poses)
+    for pose in poses:
+        avg_x += pose.position.x
+        avg_y += pose.position.y
+        avg_z += quat_to_yaw(pose.orientation)
+    avg_x /= n
+    avg_y /= n
+    avg_z /= n
+
+    while avg_z > math.pi:
+        avg_z -= 2*math.pi
+    while avg_z <= -math.pi:
+        avg_z += 2*math.pi
+
+    pwc = PoseWithCovarianceStamped()
+
+    for pose in poses:
+        dx = pose.position.x - avg_x
+        dy = pose.position.y - avg_y
+        dz = avg_z - quat_to_yaw(pose.orientation)
+        if dz > math.pi/2:
+            dz -= math.pi
+        if dz <= math.pi/2:
+            dz += math.pi
+        pwc.pose.covariance[0]  += dx ** 2 / n
+        pwc.pose.covariance[1]  += dx * dy / n
+        pwc.pose.covariance[5]  += dx * dz / n
+        pwc.pose.covariance[7]  += dy ** 2 / n
+        pwc.pose.covariance[11] += dy * dz / n
+        pwc.pose.covariance[35] += dz ** 2 / n
+
+    pwc.pose.covariance[6]  = pwc.pose.covariance[1]
+    pwc.pose.covariance[30] = pwc.pose.covariance[5]
+    pwc.pose.covariance[31] = pwc.pose.covariance[11]
+
+    pwc.pose.pose.position.x = avg_x
+    pwc.pose.pose.position.y = avg_y
+    pwc.pose.pose.orientation = yaw_to_quat(avg_z)
+    pwc.header.frame_id = "map"
+    pwc.header.stamp = rospy.Time.now()
+    return pwc
+
+
+def calc_robot_pose(robot_name):
+    global gz
+    global tf2
+    global tf_pub
+    try:
+        oTb = tf2.lookup_transform(
+            robot_name+"/odom", robot_name+"/base_link", rospy.Time(0)
+            ).transform
+    except tf2_ros.TransformException as e:
+        rospy.logwarn_throttle(10, e)
+        return None
+    resp = gz(robot_name+"::base_link", "world")
+    if resp.success:
+        mTb = resp.link_state.pose
+        # mTo = mTb * oTb
+        mTo = TransformStamped()
+        mTo.header.frame_id = "map"
+        mTo.header.stamp = rospy.Time.now()
+        mTo.child_frame_id = robot_name+"/odom"
+        mToz = quat_to_yaw(mTb.orientation) - quat_to_yaw(oTb.rotation)
+        mTo.transform.rotation = yaw_to_quat(mToz)
+        oTbx = oTb.translation.x * math.cos(mToz) \
+             - oTb.translation.y * math.sin(mToz)
+        oTby = oTb.translation.y * math.cos(mToz) \
+             + oTb.translation.x * math.sin(mToz)
+        mTo.transform.translation.x = mTb.position.x - oTbx
+        mTo.transform.translation.y = mTb.position.y - oTby
+        tf_pub.sendTransform(mTo)
+        return mTb
+    else:
+        rospy.logwarn_throttle(10, robot_name+" does not exist in gazebo")
+        return None
+
+
+def main():
+    global gz
+    global tf_pub
+    global tf2
+
+    rospy.init_node("perfect_swarm_localisation")
+
+    tf2 = tf2_ros.Buffer()
+    listener = tf2_ros.TransformListener(tf2)
+
+    num_bots = rospy.get_param("~num_robots", 10)
+    bots = []
+    for i in range(num_bots):
+        bots.append("pulsar_"+str(i))
+
+    rospy.wait_for_service("/gazebo/get_link_state")
+    gz = rospy.ServiceProxy("/gazebo/get_link_state", GetLinkState)
+    tf_pub = tf2_ros.TransformBroadcaster()
+    pub = rospy.Publisher(
+        "/swarm_pose_estimate", PoseWithCovarianceStamped, queue_size=1)
+
+    rate = rospy.Rate(10)
+    while not rospy.is_shutdown():
+        rate.sleep()
+        poses = []
+        for bot in bots:
+            p = calc_robot_pose(bot)
+            if p:
+                poses.append(p)
+        est = calc_pose_with_cov(poses)
+        pub.publish(est)
+
+
+if __name__ == '__main__':
+    try:
+        main()
+    except rospy.ROSInterruptException:
+        pass

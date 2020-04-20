@@ -368,7 +368,7 @@ geometry_msgs::TransformStamped
     SingleRobotPoseEstimator::calculate_transform(
         const nav_msgs::Odometry& odom)
 {
-    double yaw = quat_to_yaw(pose_estimate_.pose.pose.orientation)
+    double mRo = quat_to_yaw(pose_estimate_.pose.pose.orientation)
                - quat_to_yaw(odom.pose.pose.orientation);
 
     // Create the message and return
@@ -376,12 +376,17 @@ geometry_msgs::TransformStamped
     tf.header.stamp = ros::Time::now();
     tf.header.frame_id = map_frame_;
     tf.child_frame_id = odom.header.frame_id;
+    double oTbx = odom.pose.pose.position.x * cos(mRo)
+                - odom.pose.pose.position.y * sin(mRo);
+    double oTby = odom.pose.pose.position.y * cos(mRo)
+                + odom.pose.pose.position.x * sin(mRo);
+
     tf.transform.translation.x =
-        pose_estimate_.pose.pose.position.x - odom.pose.pose.position.x;
+        pose_estimate_.pose.pose.position.x - oTbx;//odom.pose.pose.position.x;
     tf.transform.translation.y =
-        pose_estimate_.pose.pose.position.y - odom.pose.pose.position.y;
-    tf.transform.translation.z =
-        pose_estimate_.pose.pose.position.z - odom.pose.pose.position.z;
-    tf.transform.rotation = yaw_to_quat(yaw);
+        pose_estimate_.pose.pose.position.y - oTby;//odom.pose.pose.position.y;
+//    tf.transform.translation.z =
+//        pose_estimate_.pose.pose.position.z - odom.pose.pose.position.z;
+    tf.transform.rotation = yaw_to_quat(mRo);
     return tf;
 }

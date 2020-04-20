@@ -63,7 +63,9 @@ class IdleState(BaseState):
         BaseState.pub.publish(cmd_vel)
         r = random.random()
         if r < 0.1:
-            return MoveToSwarmState()
+            return random.choice([
+                MoveToSwarmState(), MoveToTargetState(),
+                TurnToSwarmState(), TurnToTargetState()])
         return self
 
     def __str__(self):
@@ -99,6 +101,8 @@ class TurnToAngleState(BaseState):
         else:
             # LEZ GOOOOO
             dang = calc_ang_diff(target_ang, Z.mTb.orientation)
+            rospy.loginfo("dang: " + str(180*dang/math.pi))
+
             while dang > math.pi:
                 dang -= 2*math.pi
             while dang < -math.pi:
@@ -135,6 +139,9 @@ class MoveState(BaseState):
         self._MIN_VEL = 0.1
         self._MAX_VEL = 0.3
         self._FUTURE  = 0.2 # Seconds
+        self._TURN_P       = 0.16
+        self._MIN_TURN_VEL = 4.00
+        self._MAX_TURN_VEL = 7.00
 
     def update_cmd_vel(self, Z, sign=1):
         """
@@ -173,6 +180,18 @@ class MoveState(BaseState):
 
             cmd_vel.linear.x = sign * min(
                 cmd_vel_mod * target_vel, self._MAX_VEL)
+
+            # Turn away if we're too close to an object
+            turn_sign = 1
+            if Z.l.range - Z.l.min_range < Z.r.range - Z.r.min_range:
+                turn_sign = -1
+            if closest < 0.001:
+                ang = self._MAX_TURN_VEL
+            else:
+                ang = min(self._TURN_P / closest, self._MAX_TURN_VEL)
+                if ang >= self._MIN_TURN_VEL:
+                    cmd_vel.angular.z = turn_sign * ang
+                    cmd_vel.linear.x = 0
         BaseState.pub.publish(cmd_vel)
 
 
@@ -224,9 +243,7 @@ class TurnToSwarmState(TurnToAngleState):
             calc_ang_diff(Z.robot_data.mTb.orientation, req_quat) 
             / self._ANG_MAX_TOL)
         if r < p_toswarm:
-            return random.choice([
-                MoveToSwarmState(), MoveToTargetState(),
-                TurnToSwarmState(), TurnToTargetState()])
+            return MoveToSwarmState()
 
         return self
 
@@ -275,10 +292,10 @@ class TurnToTargetState(TurnToAngleState):
             return IdleState()
         r -= p_idle
         
-        p_toswarm = 1 - abs(
+        p_totarget = 1 - abs(
             calc_ang_diff(Z.robot_data.mTb.orientation, req_quat) 
             / self._ANG_MAX_TOL)
-        if r < p_toswarm:
+        if r < p_totarget:
             return MoveToTargetState()
 
         return self
@@ -329,7 +346,7 @@ class MoveToSwarmState(MoveState):
         dang = calc_ang_diff(req_quat, Z.robot_data.mTb.orientation)
         # Grab std deviations - we want to get within 1 std deviation
         stddevx = math.sqrt(Z.swarm_pose.covariance[0])
-        stddevy = math.sqrt(Z.swarm_pose.covariance[6])
+        stddevy = math.sqrt(Z.swarm_pose.covariance[7])
         # Particular case where there is 1 robot, cov = 0...
         if stddevx < 2e-2:
             stddevx = 2e-2
@@ -342,11 +359,13 @@ class MoveToSwarmState(MoveState):
         arrived_p = min(
             1 - dx / stddevx, 1 - dy / stddevy,
             1 - (dx / stddevx) * (dy / stddevy))
+        arrived_p = max(arrived_p, 0)
         if r < arrived_p:
             return TurnToTargetState()
         r -= arrived_p
 
-        lost_p = 0.3 * dang / self._ANG_TOL
+        lost_p = abs(0.3 * dang / self._ANG_TOL)
+        rospy.loginfo("lost_p: " + str(lost_p))
         if r < lost_p:
             return TurnToSwarmState()
         r-= lost_p
@@ -391,7 +410,7 @@ class MoveToTargetState(MoveState):
         else:
             self.update_cmd_vel(Z.robot_data, sign=-1);
 
-        # Calculate the angle between us and the swarm and the distance
+        # Calculate the angle between us and the target and the distance
         dx = Z.target_point.x - Z.robot_data.mTb.position.x
         dy = Z.target_point.y - Z.robot_data.mTb.position.y
         req_ang = math.atan2(dy, dx)
@@ -403,7 +422,7 @@ class MoveToTargetState(MoveState):
         dang = calc_ang_diff(req_quat, Z.robot_data.mTb.orientation)
         # Grab std deviations - we want to get within 1 std deviation
         stddevx = math.sqrt(Z.swarm_pose.covariance[0])
-        stddevy = math.sqrt(Z.swarm_pose.covariance[6])
+        stddevy = math.sqrt(Z.swarm_pose.covariance[7])
         # Particular case where there is 1 robot, cov = 0...
         if stddevx < 2e-2:
             stddevx = 2e-2
@@ -423,7 +442,7 @@ class MoveToTargetState(MoveState):
             return TurnToSwarmState()
         r -= left_p
 
-        lost_p = 0.3 * dang / self._ANG_TOL
+        lost_p = abs(0.1 * dang / self._ANG_TOL)
         if r < lost_p:
             return TurnToTargetState()
         r-= lost_p
@@ -468,7 +487,7 @@ class GroupTargetStateMachine(RobotStateMachine):
         Z.robot_data = super(GroupTargetStateMachine, self).get_data()
         if self._swarm_pose != None and self._target_point != None:
             Z.swarm_pose = self._swarm_pose
-            Z.target_pose = self._target_point
+            Z.target_point = self._target_point
             Z.pose_and_target_valid = True
         return Z
 
