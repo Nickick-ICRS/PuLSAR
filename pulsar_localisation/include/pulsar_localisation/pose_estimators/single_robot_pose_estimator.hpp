@@ -228,6 +228,7 @@ private:
     nav_msgs::Odometry prev_odom_;
 
     std::mutex odom_mut_;
+    bool first_odom_cb_;
 
     ros::NodeHandle nh_;
     ros::Subscriber odom_sub_;

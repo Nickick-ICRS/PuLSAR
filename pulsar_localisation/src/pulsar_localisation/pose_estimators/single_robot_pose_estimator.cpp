@@ -27,7 +27,7 @@ SingleRobotPoseEstimator::SingleRobotPoseEstimator(
     :name_(name), cloud_gen_(cloud_gen), map_man_(map_man), rd_(), 
     gen_(rd_()), range_model_(map_frame, map_man), map_frame_(map_frame),
     base_link_frame_(base_link_frame), radius_(radius), tf_listener_(tf2_),
-    min_trans_update_(min_trans_update)
+    min_trans_update_(min_trans_update), first_odom_cb_(true)
 {
     pose_estimate_.pose.pose = initial_pose;
     pose_estimate_.header.frame_id = map_frame;
@@ -132,7 +132,6 @@ void SingleRobotPoseEstimator::update_pose_estimate_with_covariance() {
     avg_point.z /= n;
 
     avg_yaw /= n;
-    while(avg_yaw > M_PI)   avg_yaw -= 2*M_PI;
     while(avg_yaw <= -M_PI) avg_yaw += 2*M_PI;
 
     // Helper lambda for calculating the difference between two angles
@@ -176,6 +175,10 @@ void SingleRobotPoseEstimator::odom_cb(
 {
     std::lock_guard<std::mutex> lock(odom_mut_);
     recent_odom_ = *msg;
+    if(first_odom_cb_) {
+        first_odom_cb_ = false;
+        prev_odom_ = *msg;
+    }
 }
 
 double SingleRobotPoseEstimator::prob_normal_distribution(
@@ -216,7 +219,7 @@ geometry_msgs::Pose SingleRobotPoseEstimator::sample_motion_model_odometry(
     xt.position.y = xt_1.position.y + sdtrans * sin(tht_1 + sdrot1);
 
     double th = quat_to_yaw(xt_1.orientation) + sdrot1 + sdrot2;
-    xt.orientation = yaw_to_quat(tht);
+    xt.orientation = yaw_to_quat(th);
     return xt;
 }
 
