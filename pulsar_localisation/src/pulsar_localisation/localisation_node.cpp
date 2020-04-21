@@ -358,35 +358,35 @@ void LocalisationNode::get_ros_parameters() {
     }
 
     if(!ros::param::param<double>(
-        "~a1", SingleRobotPoseEstimator::a1_, 0.2))
+        "~a1", RobotModel::a1_, 0.2))
     {
         ROS_WARN_STREAM(
             "Failed to get param 'a1'. Defaulting to '"
-            << SingleRobotPoseEstimator::a1_ << "'.");
+            << RobotModel::a1_ << "'.");
     }
 
     if(!ros::param::param<double>(
-        "~a2", SingleRobotPoseEstimator::a2_, 0.2))
+        "~a2", RobotModel::a2_, 0.2))
     {
         ROS_WARN_STREAM(
             "Failed to get param 'a2'. Defaulting to '"
-            << SingleRobotPoseEstimator::a2_ << "'.");
+            << RobotModel::a2_ << "'.");
     }
 
     if(!ros::param::param<double>(
-        "~a3", SingleRobotPoseEstimator::a3_, 0.2))
+        "~a3", RobotModel::a3_, 0.2))
     {
         ROS_WARN_STREAM(
             "Failed to get param 'a3'. Defaulting to '"
-            << SingleRobotPoseEstimator::a3_ << "'.");
+            << RobotModel::a3_ << "'.");
     }
 
     if(!ros::param::param<double>(
-        "~a4", SingleRobotPoseEstimator::a4_, 0.2))
+        "~a4", RobotModel::a4_, 0.2))
     {
         ROS_WARN_STREAM(
             "Failed to get param 'a4'. Defaulting to '"
-            << SingleRobotPoseEstimator::a4_ << "'.");
+            << RobotModel::a4_ << "'.");
     }
 
     if(!ros::param::param<double>(

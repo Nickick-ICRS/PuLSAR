@@ -5,9 +5,7 @@
 #include <memory>
 #include <thread>
 
-#include <ros/ros.h>
 #include <geometry_msgs/Pose.h>
-#include <geometry_msgs/PoseWithCovarianceStamped.h>
 
 #include "pose_estimators/swarm_pose_estimator.hpp"
 #include "pose_estimators/single_robot_pose_estimator.hpp"
@@ -68,7 +66,7 @@ public:
      * @brief Update robot pose estimates and swarm pose estimate.
      *
      * Update estimates of the pose of each robot within the swarm. Does
-     * *not* publish anything to TF. Also updates the pose estimate of
+     * publish anything to TF. Also updates the pose estimate of
      * the entire swarm.
      */
     void update_estimate();

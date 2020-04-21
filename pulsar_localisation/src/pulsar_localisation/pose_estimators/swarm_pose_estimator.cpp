@@ -6,13 +6,7 @@
 
 SwarmPoseEstimator::SwarmPoseEstimator(
     const std::shared_ptr<CloudGenerator>& cloud_gen,
-    const std::shared_ptr<MapManager>& map_man, std::string map_frame,
-    std::vector<std::string>& robot_names, 
-    std::map<std::string, geometry_msgs::Pose>& initial_robot_poses,
-    std::map<std::string, std::string>& robot_odom_topics,
-    std::map<std::string, std::string>& robot_base_links,
-    std::map<std::string, float>& robot_radii, unsigned int M,
-    double min_trans_update)
+    const std::shared_ptr<MapManager>& map_man, std::string map_frame)
 
     :cloud_gen_(cloud_gen), map_frame_(map_frame)
 {

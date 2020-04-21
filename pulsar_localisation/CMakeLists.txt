@@ -77,16 +77,17 @@ target_link_libraries(pulsar_map_manager
     ${catkin_libraries}
 )
 
-add_library(pulsar_sensor_models
+add_library(pulsar_models
     src/pulsar_localisation/sensor_models/range_cloud_sensor_model.cpp
+    src/pulsar_localisation/robot_models/robot_model.cpp
 )
 
-add_dependencies(pulsar_sensor_models
-    ${pulsar_sensor_models_EXPORTED_TARGETS}
+add_dependencies(pulsar_models
+    ${pulsar_models_EXPORTED_TARGETS}
     ${catkin_EXPORTED_TARGETS}
 )
 
-target_link_libraries(pulsar_sensor_models
+target_link_libraries(pulsar_models
     pulsar_cloud_generator
     pulsar_map_manager
     pulsar_funcs
@@ -109,7 +110,7 @@ target_link_libraries(pulsar_pose_estimators
     pulsar_dbscan
     pulsar_cloud_generator
     pulsar_map_manager
-    pulsar_sensor_models
+    pulsar_models
     ${catkin_LIBRARIES}
 )
 
@@ -126,7 +127,7 @@ target_link_libraries(pulsar_localisation_node
     pulsar_cloud_generator
     pulsar_map_manager
     pulsar_pose_estimators
-    pulsar_sensor_models
+    pulsar_models
     ${catkin_LIBRARIES}
 )
 

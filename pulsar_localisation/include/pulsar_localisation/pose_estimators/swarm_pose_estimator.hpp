@@ -27,36 +27,11 @@ public:
      *
      * @param map_man Pointer to an initialised map manager class instance.
      * 
-     * @param robot_names Names of the different robots in the swarm.
-     * 
-     * @param initial_robot_poses Map of starting poses of the robots in 
-     *                            the swarm keyed by name.
-     *
-     * @param robot_odom_topics Map of the topic names of robot odometry 
-     *                          measurements keyed by name.
-     * 
-     * @param robot_base_links Map of the base_link frames of the robots,
-     *                         keyed by name.
-     *
-     * @param robot_radii Map of the robot radii, keyed by name.
-     *
-     * @param map_frame The map frame of the whole swarm.
-     *
-     * @param M The number of particles to include in the single robot
-     *          pose estimator particle filters.
-     *
-     * @param min_trans_update Minimum distance for robots to move before
-     *                         performing a filter update.
+     * @param map_frame The frame to localise the swarm relative to.
      */
     SwarmPoseEstimator(
         const std::shared_ptr<CloudGenerator>& cloud_gen,
-        const std::shared_ptr<MapManager>& map_man, std::string map_frame, 
-        std::vector<std::string>& robot_names, 
-        std::map<std::string, geometry_msgs::Pose>& initial_robot_poses,
-        std::map<std::string, std::string>& robot_odom_topics,
-        std::map<std::string, std::string>& robot_base_links,
-        std::map<std::string, float>& robot_radii, unsigned int M,
-        double min_trans_update);
+        const std::shared_ptr<MapManager>& map_man, std::string map_frame);
     virtual ~SwarmPoseEstimator();
 
     /**

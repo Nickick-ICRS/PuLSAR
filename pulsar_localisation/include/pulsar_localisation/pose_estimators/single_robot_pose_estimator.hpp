@@ -1,9 +1,7 @@
 #ifndef __SINGLE_ROBOT_POSE_ESTIMATOR__
 #define __SINGLE_ROBOT_POSE_ESTIMATOR__
 
-#include <memory>
-#include <random>
-#include <mutex>
+#include <vector>
 
 #include <ros/ros.h>
 #include <geometry_msgs/Pose.h>
@@ -13,6 +11,7 @@
 #include <tf2_ros/transform_listener.h>
 #include <tf2_ros/transform_broadcaster.h>
 
+#include "robot_models/robot_model.hpp"
 #include "cloud_generator/cloud_generator.hpp"
 #include "sensor_models/range_cloud_sensor_model.hpp"
 #include "map_manager/map_manager.hpp"
@@ -24,12 +23,12 @@
  * Uses laser scan and odometry information along with knowledge of the map
  * environment to estimate the pose of the robot.
  */
-class SingleRobotPoseEstimator {
+class SingleRobotPoseEstimator :public RobotModel {
 public:
     /**
      * Constructor for the SingleRobotPoseEstimator class.
      *
-     * @param name The name of the robot (as used by cloud_gen)
+     * @param name The name of the robot (as used by cloud_gen).
      *
      * @param cloud_gen Pointer to an initialised cloud generator class
      *                  instance.
@@ -82,13 +81,6 @@ public:
     }
 private:
     /**
-     * Odometry callback from the robot.
-     *
-     * @param msg The odometry message.
-     */
-    void odom_cb(const nav_msgs::OdometryConstPtr& msg);
-
-    /**
      * @brief Runs an iteration of the augmented MCL algorithm.
      *
      * Runs one iteration of the augmented Monte Carlo Localisation
@@ -105,88 +97,6 @@ private:
     std::vector<geometry_msgs::Pose> augmented_MCL(
         const std::vector<geometry_msgs::Pose>& Xt_1,
         const nav_msgs::Odometry& ut);
-
-    /**
-     * @brief Generates a random valid pose for the robot.
-     * 
-     * Uses knowledge of the map to generate a random valid (i.e. not in a 
-     * wall) pose that the robot may be in. Does not take into consideration
-     * the poses of other robots in the swarm.
-     *
-     * @return A valid pose for the robot.
-     */
-    geometry_msgs::Pose gen_random_valid_pose();
-
-    /**
-     * @brief Generates a random valid pose for the robot about a yaw.
-     * 
-     * Uses knowledge of the map to generate a random valid (i.e. not in a 
-     * wall) pose that the robot may be in. Does not take into consideration
-     * the poses of other robots in the swarm.
-     *
-     * @param yaw The required yaw of the pose.
-     *
-     * @return A valid pose for the robot.
-     */
-    geometry_msgs::Pose gen_random_valid_pose_position(double yaw);
-    
-    /**
-     * @brief Generates a random valid pose for the robot.
-     * 
-     * Uses knowledge of the map to generate a random valid (i.e. not in a 
-     * wall) pose that the robot may be in. Does not take into consideration
-     * the poses of other robots in the swarm.
-     *
-     * @param p A pose with covariance about which to generate the point.
-     *
-     * @return A valid pose for the robot.
-     */
-    geometry_msgs::Pose gen_random_valid_pose(
-        const geometry_msgs::PoseWithCovariance& p);
-
-    /**
-     * @brief Calculate the probability of a occuring.
-     *
-     * Calculate the probability of a in the normal distribution with
-     * variance b2. See Probabilistic Robotics by Thrun et al.
-     * 
-     * @param a The event that the probability of occuring is being
-     *          calculated for.
-     * 
-     * @param b2 The variance of the normal distribution.
-     *
-     * @return p(a) in the normal distribution defined by b2.
-     */
-    double prob_normal_distribution(double a, double b2);
-
-    /**
-     * @brief Samples a value from a normal distribution.
-     *
-     * Samples a value from the normal distribution defined by b2.
-     *
-     * @param b2 The variance of the normal distribution.
-     *
-     * @return A random number from the distribution.
-     */
-    double sample_normal_distribution(double b2);
-
-    /**
-     * @brief Samples from p(xt | ut, xt-1).
-     *
-     * Sample from p(xt | ut, xt-1) given odometry information. See 
-     * Probabilistic Robotics by Thrun et al.
-     *
-     * @param ut The most recent odometry measurement.
-     *
-     * @param ut_1 The previously used odometry measurement.
-     *
-     * @param xt_1 The most recent pose estimate.
-     *
-     * @return The current (new) pose estimate.
-     */
-    geometry_msgs::Pose sample_motion_model_odometry(
-        const geometry_msgs::Pose& ut, const geometry_msgs::Pose& ut_1,
-        const geometry_msgs::Pose& xt_1);
 
     /**
      * @brief Updates the overall pose estimate and covariance.
@@ -213,37 +123,13 @@ private:
     geometry_msgs::TransformStamped calculate_transform(
         const nav_msgs::Odometry& odom);
 
-    std::string name_;
-    std::string base_link_frame_;
-    std::string map_frame_;
-    float radius_;
-
-    const std::shared_ptr<CloudGenerator> cloud_gen_;
-    const std::shared_ptr<MapManager> map_man_;
-    RangeCloudSensorModel range_model_;
-
     geometry_msgs::PoseWithCovarianceStamped pose_estimate_;
     std::vector<geometry_msgs::Pose> pose_estimate_cloud_;
-    nav_msgs::Odometry recent_odom_;
-    nav_msgs::Odometry prev_odom_;
 
-    std::mutex odom_mut_;
-    bool first_odom_cb_;
-
-    ros::NodeHandle nh_;
-    ros::Subscriber odom_sub_;
     tf2_ros::Buffer tf2_;
     tf2_ros::TransformListener tf_listener_;
     tf2_ros::TransformBroadcaster tf_broadcaster_;
 
-    std::random_device rd_;
-    std::mt19937_64 gen_;
-
-    double min_trans_update_;
-    double min_rot_update_;
-
-    // Robot noise parameters
-    static double a1_, a2_, a3_, a4_;
     // Exponential parameters for Augmented MCL, 0 <= aslow < afast
     static double aslow_, afast_;
 

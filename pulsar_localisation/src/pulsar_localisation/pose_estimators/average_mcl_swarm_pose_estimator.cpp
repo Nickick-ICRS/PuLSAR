@@ -15,9 +15,7 @@ AverageMCLSwarmPoseEstimator::AverageMCLSwarmPoseEstimator(
     double min_trans_update)
 
     :SwarmPoseEstimator(
-        cloud_gen, map_man, map_frame, robot_names, initial_robot_poses,
-        robot_odom_topics, robot_base_links, robot_radii, M,
-        min_trans_update)
+        cloud_gen, map_man, map_frame)
 {
     pose_pub_ = nh_.advertise<geometry_msgs::PoseWithCovarianceStamped>(
         "swarm_pose_estimate", 1);
