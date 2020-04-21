@@ -5,6 +5,7 @@
 
 #include "cloud_generator/cloud_generator.hpp"
 #include "pose_estimators/swarm_pose_estimator.hpp"
+#include "pose_estimators/average_mcl_swarm_pose_estimator.hpp"
 #include "map_manager/map_manager.hpp"
 #include "sensor_models/range_cloud_sensor_model.hpp"
 
@@ -143,7 +144,7 @@ LocalisationNode::LocalisationNode() :running_(true) {
 
     map_man_.reset(new MapManager(map_topic_));
 
-    pose_est_.reset(new SwarmPoseEstimator(
+    pose_est_.reset(new AverageMCLSwarmPoseEstimator(
         cloud_gen_, map_man_, "map", robot_names, initial_pose_estimates_, 
         robot_odom_map, robot_base_link_map, robot_radii_map, 
         particle_filter_size_, min_trans_update_));

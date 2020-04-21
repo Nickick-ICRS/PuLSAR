@@ -1,5 +1,5 @@
-#ifndef __SWARM_POSE_ESTIMATOR_HPP__
-#define __SWARM_POSE_ESTIMATOR_HPP__
+#ifndef __AVERAGE_MCL_SWARM_POSE_ESTIMATOR_HPP__
+#define __AVERAGE_MCL_SWARM_POSE_ESTIMATOR_HPP__
 
 #include <map>
 #include <memory>
@@ -9,18 +9,23 @@
 #include <geometry_msgs/Pose.h>
 #include <geometry_msgs/PoseWithCovarianceStamped.h>
 
+#include "pose_estimators/swarm_pose_estimator.hpp"
 #include "pose_estimators/single_robot_pose_estimator.hpp"
 #include "cloud_generator/cloud_generator.hpp"
 
 /**
  * @brief Estimates the pose of the whole swarm.
  *
- * Abstract class to represent a pose estimator for the whole swarm.
+ * Class to estimate the pose of an entire swarm of robots. Estimates of the
+ * pose of individual robots are combined with data points fromt the swarm
+ * as a whole to estimate the pose of the whole swarm. From this, errors can
+ * be found in pose estimates of swarm members and these may be iteratively
+ * updated to improve pose estimates.
  */
-class SwarmPoseEstimator {
+class AverageMCLSwarmPoseEstimator :public SwarmPoseEstimator {
 public:
     /**
-     * Constructor for the SwarmPoseEstimator class.
+     * Constructor for the AverageMCLSwarmPoseEstimator class.
      * 
      * @param cloud_gen Pointer to an initialised cloud generator class 
      *                  instance.
@@ -48,7 +53,7 @@ public:
      * @param min_trans_update Minimum distance for robots to move before
      *                         performing a filter update.
      */
-    SwarmPoseEstimator(
+    AverageMCLSwarmPoseEstimator(
         const std::shared_ptr<CloudGenerator>& cloud_gen,
         const std::shared_ptr<MapManager>& map_man, std::string map_frame, 
         std::vector<std::string>& robot_names, 
@@ -57,58 +62,21 @@ public:
         std::map<std::string, std::string>& robot_base_links,
         std::map<std::string, float>& robot_radii, unsigned int M,
         double min_trans_update);
-    virtual ~SwarmPoseEstimator();
+    ~AverageMCLSwarmPoseEstimator();
 
     /**
      * @brief Update robot pose estimates and swarm pose estimate.
-     */
-    virtual void update_estimate() = 0;
-
-    /**
-     * Get the pose estimates of each robot in the swarm.
      *
-     * @return Map of the pose estimates, keyed by robot name.
+     * Update estimates of the pose of each robot within the swarm. Does
+     * *not* publish anything to TF. Also updates the pose estimate of
+     * the entire swarm.
      */
-    virtual std::map<std::string, geometry_msgs::PoseWithCovarianceStamped>& get_pose_estimates()
-    {
-        return robot_pose_estimates_;
-    }
+    void update_estimate();
+private:
+    std::map<std::string, std::shared_ptr<SingleRobotPoseEstimator>>
+        robot_pose_estimators_;
 
-    /**
-     * Get the pose estimate of the swarm.
-     *
-     * @return The current pose estimate.
-     */
-    virtual geometry_msgs::PoseWithCovarianceStamped& get_pose_estimate() {
-        return swarm_pose_estimate_;
-    };
-
-    /**
-     * Publish the swarm pose estimate.
-     */
-    virtual void publish_pose_estimate();
-protected:
-    /**
-     * @brief Calculate pose estimate covariance.
-     *
-     * After the individual pose estimators have been updated, this function
-     * is called to calculate the average pose and accompanying covariance.
-     */
-    virtual void update_estimate_covariance();
-
-    geometry_msgs::PoseWithCovarianceStamped swarm_pose_estimate_;
-
-    std::map<std::string, geometry_msgs::PoseWithCovarianceStamped>
-        robot_pose_estimates_;
-
-    std::string map_frame_;
-    std::shared_ptr<CloudGenerator> cloud_gen_;
-
-    ros::NodeHandle nh_;
-    ros::Publisher pose_pub_;
-
-    // For debugging
-    friend class LocalisationNode;
+    std::map<std::string, std::thread> worker_threads_;
 };
 
-#endif // __SWARM_POSE_ESTIMATOR_HPP__
+#endif // __AVERAGE_MCL_SWARM_POSE_ESTIMATOR_HPP__

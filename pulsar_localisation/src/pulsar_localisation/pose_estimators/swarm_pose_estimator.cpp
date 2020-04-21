@@ -18,15 +18,6 @@ SwarmPoseEstimator::SwarmPoseEstimator(
 {
     pose_pub_ = nh_.advertise<geometry_msgs::PoseWithCovarianceStamped>(
         "swarm_pose_estimate", 1);
-    for(const std::string& name : robot_names) {
-        robot_pose_estimators_[name].reset(new SingleRobotPoseEstimator(
-            name, cloud_gen, map_man, map_frame, initial_robot_poses[name],
-            robot_odom_topics[name], robot_base_links[name], 
-            robot_radii[name], M, min_trans_update));
-        robot_pose_estimates_[name] = 
-            robot_pose_estimators_[name]->get_pose_estimate();
-        worker_threads_[name] = std::thread();
-    }
 
     swarm_pose_estimate_.header.frame_id = map_frame;
 }
@@ -35,27 +26,12 @@ SwarmPoseEstimator::~SwarmPoseEstimator() {
     // dtor
 }
 
-void SwarmPoseEstimator::update_estimate() {
-    // Run all the update functions in threads
-    for(auto& pair : worker_threads_) {
-        pair.second = std::thread(
-            &SingleRobotPoseEstimator::update_estimate,
-            robot_pose_estimators_[pair.first]);
-    }
-    for(auto& pair : worker_threads_) {
-        pair.second.join();
-    }
-    update_estimate_covariance();
-}
-
 void SwarmPoseEstimator::update_estimate_covariance() {
     // For calculating avg pose
     geometry_msgs::PoseWithCovariance avg_pose;
     auto& pos = avg_pose.pose.position;
     double avg_yaw;
-    for(const auto& pair : robot_pose_estimators_) {
-        robot_pose_estimates_[pair.first] = 
-            pair.second->get_pose_estimate();
+    for(const auto& pair : robot_pose_estimates_) {
         const auto& pose = robot_pose_estimates_[pair.first].pose.pose;
         // Store new pose estimate
         // Calculate average
@@ -64,7 +40,7 @@ void SwarmPoseEstimator::update_estimate_covariance() {
         pos.z += pose.position.z;
         avg_yaw += quat_to_yaw(pose.orientation);
     }
-    double n = robot_pose_estimators_.size();
+    double n = robot_pose_estimates_.size();
     avg_pose.pose.position.x /= n;
     avg_pose.pose.position.y /= n;
     avg_pose.pose.position.z /= n;
