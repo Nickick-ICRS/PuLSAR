@@ -8,7 +8,7 @@
 #include <geometry_msgs/Pose.h>
 
 #include "pose_estimators/swarm_pose_estimator.hpp"
-#include "pose_estimators/single_robot_pose_estimator.hpp"
+#include "pose_estimators/mcl_single_robot_pose_estimator.hpp"
 #include "cloud_generator/cloud_generator.hpp"
 
 /**
@@ -71,7 +71,7 @@ public:
      */
     void update_estimate();
 private:
-    std::map<std::string, std::shared_ptr<SingleRobotPoseEstimator>>
+    std::map<std::string, std::shared_ptr<MCLSingleRobotPoseEstimator>>
         robot_pose_estimators_;
 
     std::map<std::string, std::thread> worker_threads_;

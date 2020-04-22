@@ -90,7 +90,7 @@ private:
     int cycle_sensor_readings_;
 
     // How many particles are kept in the filter(s) 
-    // see SingleRobotPoseEstimator
+    // see MCLSingleRobotPoseEstimator
     int particle_filter_size_;
 
     // Minimum translation required to run a filter update
@@ -390,19 +390,19 @@ void LocalisationNode::get_ros_parameters() {
     }
 
     if(!ros::param::param<double>(
-        "~aslow", SingleRobotPoseEstimator::aslow_, 0.2))
+        "~aslow", MCLSingleRobotPoseEstimator::aslow_, 0.2))
     {
         ROS_WARN_STREAM(
             "Failed to get param 'aslow'. Defaulting to '"
-            << SingleRobotPoseEstimator::aslow_ << "'.");
+            << MCLSingleRobotPoseEstimator::aslow_ << "'.");
     }
 
     if(!ros::param::param<double>(
-        "~afast", SingleRobotPoseEstimator::afast_, 0.2))
+        "~afast", MCLSingleRobotPoseEstimator::afast_, 0.2))
     {
         ROS_WARN_STREAM(
             "Failed to get param 'afast'. Defaulting to '"
-            << SingleRobotPoseEstimator::afast_ << "'.");
+            << MCLSingleRobotPoseEstimator::afast_ << "'.");
     }
 
     if(!ros::param::param<double>(
@@ -470,21 +470,22 @@ void LocalisationNode::get_ros_parameters() {
     }
 
     if(!ros::param::param<int>(
-        "~dbscan_min_points", SingleRobotPoseEstimator::dbscan_min_points_,
+        "~dbscan_min_points", 
+        MCLSingleRobotPoseEstimator::dbscan_min_points_,
         5))
     {
         ROS_WARN_STREAM(
             "Failed to get param 'dbscan_min_points'. Defaulting to '"
-            << SingleRobotPoseEstimator::dbscan_min_points_ << "'.");
+            << MCLSingleRobotPoseEstimator::dbscan_min_points_ << "'.");
     }
 
     if(!ros::param::param<double>(
-        "~dbscan_epsilon", SingleRobotPoseEstimator::dbscan_epsilon_,
+        "~dbscan_epsilon", MCLSingleRobotPoseEstimator::dbscan_epsilon_,
         0.05*0.05))
     {
         ROS_WARN_STREAM(
             "Failed to get param 'dbscan_epsilon'. Defaulting to '"
-            << SingleRobotPoseEstimator::dbscan_epsilon_ << "'.");
+            << MCLSingleRobotPoseEstimator::dbscan_epsilon_ << "'.");
     }
 
     if(!ros::param::param<double>(

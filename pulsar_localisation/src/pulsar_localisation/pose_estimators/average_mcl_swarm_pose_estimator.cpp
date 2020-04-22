@@ -20,7 +20,7 @@ AverageMCLSwarmPoseEstimator::AverageMCLSwarmPoseEstimator(
     pose_pub_ = nh_.advertise<geometry_msgs::PoseWithCovarianceStamped>(
         "swarm_pose_estimate", 1);
     for(const std::string& name : robot_names) {
-        robot_pose_estimators_[name].reset(new SingleRobotPoseEstimator(
+        robot_pose_estimators_[name].reset(new MCLSingleRobotPoseEstimator(
             name, cloud_gen, map_man, map_frame, initial_robot_poses[name],
             robot_odom_topics[name], robot_base_links[name], 
             robot_radii[name], M, min_trans_update));
@@ -40,7 +40,7 @@ void AverageMCLSwarmPoseEstimator::update_estimate() {
     // Run all the update functions in threads
     for(auto& pair : worker_threads_) {
         pair.second = std::thread(
-            &SingleRobotPoseEstimator::update_estimate,
+            &MCLSingleRobotPoseEstimator::update_estimate,
             robot_pose_estimators_[pair.first]);
     }
     for(auto& pair : worker_threads_) {
