@@ -131,6 +131,11 @@ public:
     double cone_cast_with_bots(
         const geometry_msgs::Point& p, double ang, double spread,
         std::string robot_name);
+
+    /**
+     * Publishes the maps so that they may be visualized for debugging.
+     */
+    void publish_maps();
 private:
     /**
      * Callback to receive the map stored on the map server.
@@ -213,6 +218,7 @@ private:
     std::map<std::string, geometry_msgs::Pose> robot_poses_;
     std::map<std::string, geometry_msgs::Pose> old_robot_poses_;
     std::map<std::string, float> robot_radii_;
+    std::map<std::string,ros::Publisher> map_with_robots_pubs_;
 
     ros::NodeHandle nh_;
     ros::Subscriber map_sub_;

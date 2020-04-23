@@ -3,6 +3,7 @@
 #include "maths/useful_functions.hpp"
 
 #include <cmath>
+#include <chrono>
 
 AverageMCLSwarmPoseEstimator::AverageMCLSwarmPoseEstimator(
     const std::shared_ptr<CloudGenerator>& cloud_gen,
@@ -37,6 +38,7 @@ AverageMCLSwarmPoseEstimator::~AverageMCLSwarmPoseEstimator() {
 }
 
 void AverageMCLSwarmPoseEstimator::update_estimate() {
+    auto now = std::chrono::high_resolution_clock::now();
     // Run all the update functions in threads
     for(auto& pair : worker_threads_) {
         pair.second = std::thread(
@@ -49,4 +51,7 @@ void AverageMCLSwarmPoseEstimator::update_estimate() {
             robot_pose_estimators_[pair.first]->get_pose_estimate();
     }
     update_estimate_covariance();
+    std::chrono::duration<double, std::milli> dt = 
+        std::chrono::high_resolution_clock::now() - now;
+    ROS_INFO_STREAM("Update took " << dt.count() << " milliseconds.");
 }

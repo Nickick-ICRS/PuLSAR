@@ -31,19 +31,6 @@ public:
     ~RangeCloudSensorModel();
 
     /**
-     * @brief Add a pose estimate to the model history.
-     *
-     * Adds a pose estimate to the history of the model, allowing it to
-     * account for robot movement over the course of measurements.
-     *
-     * N.B. Currently unused.
-     *
-     * @param pose The pose estimate.
-     */
-    void add_pose_estimate(
-        const geometry_msgs::PoseWithCovarianceStamped& p);
-
-    /**
      * @brief Weighs how likely a pose estimate is to being true.
      *
      * Considering the current measurement data and knowledge of

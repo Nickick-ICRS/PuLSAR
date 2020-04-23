@@ -2,11 +2,14 @@
 #define __MCL_SWARM_POSE_ESTIMATOR_HPP__
 
 #include <map>
+#include <vector>
 #include <memory>
 
 #include <geometry_msgs/Pose.h>
 
 #include "pose_estimators/swarm_pose_estimator.hpp"
+#include "robot_models/robot_model.hpp"
+#include "map_manager/map_manager.hpp"
 #include "cloud_generator/cloud_generator.hpp"
 
 /**
@@ -16,7 +19,7 @@
  * MCL filter, where pose estimates are tested among all robots in order
  * to attempt to reduce the total number of points required in the filter.
  */
-class MCLSwarmPoseEstimator :public(SwarmPoseEstimator) {
+class MCLSwarmPoseEstimator :public SwarmPoseEstimator {
 public:
     /**
      * Constructor for the MCLSwarmPoseEstimator class.
@@ -43,7 +46,6 @@ public:
      *
      * @param M The number of particles to include in the particle filter.
      */
-     * 
     MCLSwarmPoseEstimator(
         const std::shared_ptr<CloudGenerator>& cloud_gen,
         const std::shared_ptr<MapManager>& map_man, std::string map_frame,

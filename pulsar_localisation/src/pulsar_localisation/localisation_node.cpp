@@ -181,6 +181,7 @@ void LocalisationNode::loop() {
         }
         c.header.stamp = ros::Time::now();
         pub.publish(c);
+        map_man_->publish_maps();
     }
 }
 

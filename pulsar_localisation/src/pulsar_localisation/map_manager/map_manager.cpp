@@ -26,6 +26,20 @@ MapManager::~MapManager() {
     // dtor
 }
 
+void MapManager::publish_maps() {
+    for(const auto& pair : map_with_robots_pubs_) {
+        const ros::Publisher& pub = pair.second;
+        std::string robot_name = pair.first;
+        nav_msgs::OccupancyGrid msg;
+        std::shared_lock<std::shared_mutex> lock(map_mutex_);
+        msg.header = map_->header;
+        msg.info = map_->info;
+        msg.header.stamp = ros::Time::now();
+        msg.data = maps_with_robots_[robot_name];
+        pub.publish(msg);
+    }
+}
+
 void MapManager::map_cb(const nav_msgs::OccupancyGridPtr& msg) {
     // This mutex lets us have multiple reads *or* one write at a time
     std::unique_lock<std::shared_mutex> lock(map_mutex_);
@@ -176,6 +190,8 @@ void MapManager::update_map_with_robot(std::string robot_name) {
     catch(std::out_of_range) {
         std::unique_lock<std::shared_mutex> lock(map_mutex_);
         maps_with_robots_[robot_name] = map_data_;
+        map_with_robots_pubs_[robot_name] = 
+            nh_.advertise<nav_msgs::OccupancyGrid>(robot_name+"/map", 10);
     }
 
     const geometry_msgs::Pose& new_pose = robot_poses_[robot_name];
@@ -183,14 +199,15 @@ void MapManager::update_map_with_robot(std::string robot_name) {
     std::vector<unsigned int> old_tiles;
     try {
         const auto& old_pose = old_robot_poses_.at(robot_name);
-        // First get the tiles this robot was using to unoccupied
+        // First get the tiles this robot was using to set to unoccupied
         old_tiles = get_tiles(old_pose.position, radius);
     }
     catch(std::out_of_range) {
         // No problem here
     }
+    old_robot_poses_[robot_name] = new_pose;
 
-    // Now get the tiles the robot is using to occupied
+    // Now get the tiles the robot is using to set to occupied
     auto new_tiles = get_tiles(new_pose.position, radius);
 
     std::shared_lock<std::shared_mutex> lock(map_mutex_);

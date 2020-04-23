@@ -28,51 +28,6 @@ RangeCloudSensorModel::~RangeCloudSensorModel() {
     // dtor
 }
 
-void RangeCloudSensorModel::add_pose_estimate(
-    const geometry_msgs::PoseWithCovarianceStamped& p)
-{
-    // TODO: Do I need this?
-    /*
-    // Store current time so we can remove any old time points
-    ros::Time now = ros::Time::now();
-    // Check if we have a pose estimate with a similar time slot
-    int best_i = 0;
-    float best_diff = 1e10;
-    for(int i = 0; i < pose_estimates_.size(); i++) {
-        if(pose_estimates_[i].header.stamp < 
-           now - ros::Duration(cycle_sensor_readings_))
-        {
-            pose_estimates_.erase(pose_estimates_.begin()+i);
-            i--;
-        }
-        else {
-            auto diff = p.header.stamp - pose_estimates_[i].header.stamp;
-            float diff_s = diff.sec + diff.nsec / 1e9;
-            if(fabsf(diff_s) < fabsf(best_diff)) {
-                best_diff = diff_s;
-                best_i = i;
-            }
-        }
-    }
-
-    // If the difference is very small then replace the closest element
-    if(fabsf(best_diff) < time_resolution_) {
-        pose_estimates_[best_i] = p;
-    }
-    // If the difference is negative then place the new measurement before
-    // the closest element
-    else if(best_diff < 0)
-        pose_estimates_.insert(pose_estimates_.begin() + best_i, p);
-    // Otherwise place the new measurement after the closest element
-    else {
-        if(best_i + 1 >= pose_estimates_.size())
-            pose_estimates_.push_back(p);
-        else
-            pose_estimates_.insert(pose_estimates_.begin() + best_i + 1, p);
-    }
-    */
-}
-
 float RangeCloudSensorModel::model(
     const geometry_msgs::Pose& p, 
     const std::vector<sensor_msgs::Range>& c,
@@ -94,7 +49,7 @@ float RangeCloudSensorModel::model(
 
         // Flag to say whether this pose is relative to the new pose
         // estimate, or an older one in the past
-        bool in_past = true;
+        bool in_past = false;
         
         try {
             tf_buffer_.transform(pt2, pt, map_frame_);
@@ -129,7 +84,7 @@ float RangeCloudSensorModel::model(
             pt.point.x = pt.point.x * cos(th) - pt.point.y * sin(th);
             pt.point.y = pt.point.x * sin(th) + pt.point.y * cos(th);
             pt.header.frame_id = map_frame_;
-            //in_past = false;
+            in_past = false;
         }
 
         // Compute the ideal measurement via raycasting

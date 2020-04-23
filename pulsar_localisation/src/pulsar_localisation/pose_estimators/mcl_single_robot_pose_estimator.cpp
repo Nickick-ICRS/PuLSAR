@@ -52,6 +52,9 @@ void MCLSingleRobotPoseEstimator::update_estimate() {
     update_pose_estimate_with_covariance();
     auto tf = calculate_transform(odom);
     tf_broadcaster_.sendTransform(tf);
+
+    // Set the pose in the map
+    map_man_->set_robot_pose(name_, pose_estimate_.pose.pose, radius_);
 }
 
 void MCLSingleRobotPoseEstimator::update_pose_estimate_with_covariance() {
@@ -113,6 +116,13 @@ void MCLSingleRobotPoseEstimator::update_pose_estimate_with_covariance() {
     avg_point.z /= n;
 
     avg_yaw /= n;
+    if(!std::isfinite(avg_yaw)) {
+        ROS_WARN_STREAM(
+            "Non-finite average yaw during clustering: " << avg_yaw 
+            << "... Skipping update of " << name_ << ".");
+        return;
+    }
+    while(avg_yaw > M_PI) avg_yaw -= 2*M_PI;
     while(avg_yaw <= -M_PI) avg_yaw += 2*M_PI;
 
     // Helper lambda for calculating the difference between two angles
@@ -193,9 +203,19 @@ std::vector<geometry_msgs::Pose>
         wtotal += wt[m];
         // Update the cloud + weights
         Xtbar.emplace_back(xt[m], wt[m]);
-        avg_yaw += quat_to_yaw(xt.back().orientation);
+        double yaw = quat_to_yaw(xt.back().orientation);
+        if(std::isfinite(yaw))
+            avg_yaw += quat_to_yaw(xt.back().orientation);
+        else 
+            ROS_WARN_STREAM("Ignoring non-finite yaw in estimate cloud");
     }
     avg_yaw /= M;
+    if(!std::isfinite(avg_yaw)) {
+        ROS_WARN_STREAM(
+            "Non-finite average yaw in MCL: " << avg_yaw 
+            << "... Skipping update of " << name_ << ". M: " << M);
+        return Xt_1;
+    }
     while(avg_yaw > M_PI)  avg_yaw -= 2*M_PI;
     while(avg_yaw < -M_PI) avg_yaw += 2*M_PI;
 
@@ -244,6 +264,11 @@ std::vector<geometry_msgs::Pose>
                     Xtbar.back().first, radius_));
             }
         }
+    }
+
+    if(Xt.size() == 0) {
+        ROS_WARN_STREAM(name_ << ": Xt was size 0, skipping update...");
+        Xt = Xt_1;
     }
 
     return Xt;

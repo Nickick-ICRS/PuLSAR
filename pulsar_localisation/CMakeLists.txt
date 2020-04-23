@@ -99,6 +99,7 @@ add_library(pulsar_pose_estimators
     src/pulsar_localisation/pose_estimators/single_robot_pose_estimator.cpp
     src/pulsar_localisation/pose_estimators/average_mcl_swarm_pose_estimator.cpp
     src/pulsar_localisation/pose_estimators/mcl_single_robot_pose_estimator.cpp
+    src/pulsar_localisation/pose_estimators/mcl_swarm_pose_estimator.cpp
 )
 
 add_dependencies(pulsar_pose_estimators
