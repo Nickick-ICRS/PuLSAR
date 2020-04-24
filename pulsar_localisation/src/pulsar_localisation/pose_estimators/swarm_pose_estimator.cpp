@@ -40,6 +40,10 @@ void SwarmPoseEstimator::update_estimate_covariance() {
     avg_pose.pose.position.z /= n;
 
     avg_yaw /= n;
+    if(!std::isfinite(avg_yaw)) {
+        ROS_ERROR("avg_yaw is not finite! Discarding swarm pose estimate.");
+        return;
+    }
     while(avg_yaw > M_PI)   avg_yaw -= 2*M_PI;
     while(avg_yaw <= -M_PI) avg_yaw += 2*M_PI;
 
@@ -55,6 +59,10 @@ void SwarmPoseEstimator::update_estimate_covariance() {
 
     // Calculate covariance matrix
     auto& cov_mat = avg_pose.covariance;
+
+    // Note that we don't subtract 1 from n here as this is a full 
+    // covariance not a sample covariance. That's why the function needs
+    // to be duplicated rather than using the one from useful_functions.hpp
 
     for(const auto& pair : robot_pose_estimates_) {
         const auto& p = pair.second.pose.pose;

@@ -5,9 +5,16 @@
 
 #include "cloud_generator/cloud_generator.hpp"
 #include "pose_estimators/swarm_pose_estimator.hpp"
+#include "pose_estimators/swarm_pose_estimator.hpp"
+#include "pose_estimators/mcl_swarm_pose_estimator.hpp"
 #include "pose_estimators/average_mcl_swarm_pose_estimator.hpp"
 #include "map_manager/map_manager.hpp"
 #include "sensor_models/range_cloud_sensor_model.hpp"
+
+// Definitions of available swarm pose estimators
+#define MCL                 "mcl"
+#define AVERAGE_SINGLE_MCL  "average_single_mcl"
+#define DEFAULT_LOCALISER   AVERAGE_SINGLE_MCL
 
 /**
  * @brief Localisation main class
@@ -52,7 +59,7 @@ private:
     /**
      * Class to handle swarm pose estimates.
      */
-    std::shared_ptr<SwarmPoseEstimator> pose_est_;
+    std::unique_ptr<SwarmPoseEstimator> pose_est_;
 
     /**
      * Class to handle the map of the environment.
@@ -82,6 +89,9 @@ private:
     std::map<std::string, std::string> base_link_frames_;
     // Map of initial poses of the robots
     std::map<std::string, geometry_msgs::Pose> initial_pose_estimates_;
+    
+    // Which localiser should we use?
+    std::string localiser_;
 
     /* ******************** *
      * Algorithm parameters *
@@ -144,10 +154,24 @@ LocalisationNode::LocalisationNode() :running_(true) {
 
     map_man_.reset(new MapManager(map_topic_));
 
-    pose_est_.reset(new AverageMCLSwarmPoseEstimator(
-        cloud_gen_, map_man_, "map", robot_names, initial_pose_estimates_, 
-        robot_odom_map, robot_base_link_map, robot_radii_map, 
-        particle_filter_size_, min_trans_update_));
+    if(localiser_ == AVERAGE_SINGLE_MCL) {
+        pose_est_.reset(new AverageMCLSwarmPoseEstimator(
+            cloud_gen_, map_man_, "map", robot_names,
+            initial_pose_estimates_, robot_odom_map, robot_base_link_map, 
+            robot_radii_map, particle_filter_size_, min_trans_update_));
+    }
+    else if(localiser_ == MCL) {
+        pose_est_.reset(new MCLSwarmPoseEstimator(
+            cloud_gen_, map_man_, "map", robot_names,
+            initial_pose_estimates_, robot_odom_map, robot_base_link_map, 
+            robot_radii_map, particle_filter_size_, min_trans_update_));
+    }
+    else {
+        throw std::invalid_argument(
+            "'" + localiser_ + "' is not a recognised localisation"
+            + " algorithm. Available algorithms are: '" + MCL + "', '"
+            + AVERAGE_SINGLE_MCL + "'.");
+    }
 
     main_thread_ = std::thread(&LocalisationNode::loop, this);
 }
@@ -503,5 +527,13 @@ void LocalisationNode::get_ros_parameters() {
         ROS_WARN_STREAM(
             "Failed to get param 'update_rate'. Defaulting to '"
             << update_rate_hz_ << "'.");
+    }
+
+    if(!ros::param::param<std::string>(
+        "~robot_localiser", localiser_, DEFAULT_LOCALISER))
+    {
+        ROS_WARN_STREAM(
+            "Failed to get param 'robot_localiser'. Defaulting to '"
+            << localiser_ << "'.");
     }
 }

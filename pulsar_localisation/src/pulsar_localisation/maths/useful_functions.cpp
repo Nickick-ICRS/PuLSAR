@@ -24,3 +24,58 @@ double sample_normal_distribution(double b2) {
     std::normal_distribution<double> dist(0, sqrt(b2));
     return dist(gen);
 }
+
+geometry_msgs::PoseWithCovariance calculate_pose_with_covariance(
+    const std::vector<geometry_msgs::Pose>& poses)
+{
+    if(poses.size() == 0)
+        throw std::runtime_error(
+            "Can't calculate the average of no points!");
+
+    double avg_yaw = 0;
+    geometry_msgs::PoseWithCovariance ret;
+
+    geometry_msgs::Point& avg_pt = ret.pose.position;
+
+    double n = poses.size();
+
+    for(auto& pose : poses) {
+        avg_yaw += quat_to_yaw(pose.orientation);
+        avg_pt.x += pose.position.x;
+        avg_pt.y += pose.position.y;
+    }
+
+    avg_yaw /= n;
+    avg_pt.x /= n;
+    avg_pt.y /= n;
+
+    if(!std::isfinite(avg_yaw))
+        throw std::runtime_error("Average yaw is not finite!");
+
+    while(avg_yaw > M_PI) avg_yaw -= 2*M_PI;
+    while(avg_yaw <= -M_PI) avg_yaw += 2*M_PI;
+
+    auto& cov_mat = ret.covariance;
+
+    n -= 1;
+    if(n <= 1e-3) n = 1e-3;
+
+    for(auto& pose : poses) {
+        double dx = pose.position.x - avg_pt.x;
+        double dy = pose.position.y - avg_pt.y;
+        double dz = quat_to_yaw(pose.orientation) - avg_yaw;
+        if(dz > M_PI) dz -= 2*M_PI;
+        if(dz <= -M_PI) dz += 2*M_PI;
+        cov_mat[0]  += dx * dx / n;
+        cov_mat[1]  += dx * dy / n;
+        cov_mat[5]  += dx * dz / n;
+        cov_mat[7]  += dy * dy / n;
+        cov_mat[11] += dy * dz / n;
+        cov_mat[35] += dz * dz / n;
+    }
+    cov_mat[6]  = cov_mat[1];
+    cov_mat[30] = cov_mat[5];
+    cov_mat[31] = cov_mat[11];
+
+    return ret;
+}

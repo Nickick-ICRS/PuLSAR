@@ -50,7 +50,7 @@ void MCLSingleRobotPoseEstimator::update_estimate() {
     // Find the mean and covariance of the cloud and store in the overall 
     // pose estimate
     update_pose_estimate_with_covariance();
-    auto tf = calculate_transform(odom);
+    auto tf = calculate_transform(pose_estimate_.pose.pose);
     tf_broadcaster_.sendTransform(tf);
 
     // Set the pose in the map
@@ -98,67 +98,10 @@ void MCLSingleRobotPoseEstimator::update_pose_estimate_with_covariance() {
         }
     }
 
-    auto& best_cluster = clustered_poses[best_it];
-
-    geometry_msgs::Point avg_point;
-    double avg_yaw;
-
-    // First calculate means
-    for(const auto& pose : best_cluster) {
-        avg_point.x += pose.position.x;
-        avg_point.y += pose.position.y;
-        avg_point.z += pose.position.z;
-        avg_yaw += quat_to_yaw(pose.orientation);
-    }
-    double n = best_cluster.size();
-    avg_point.x /= n;
-    avg_point.y /= n;
-    avg_point.z /= n;
-
-    avg_yaw /= n;
-    if(!std::isfinite(avg_yaw)) {
-        ROS_WARN_STREAM(
-            "Non-finite average yaw during clustering: " << avg_yaw 
-            << "... Skipping update of " << name_ << ".");
-        return;
-    }
-    while(avg_yaw > M_PI) avg_yaw -= 2*M_PI;
-    while(avg_yaw <= -M_PI) avg_yaw += 2*M_PI;
-
-    // Helper lambda for calculating the difference between two angles
-    static auto ang_diff = [](double a, double b) {
-        double diff = a-b;
-        if(diff > M_PI/2)   diff -= M_PI;
-        if(diff <= -M_PI/2) diff += M_PI;
-        return diff;
-    };
-
-    // Now calculate the covariance matrix
-    auto& cov_mat = pose_estimate_.pose.covariance;
-    // Clear previous covariance values
-    for(int i = 0; i < 36; i++)
-        cov_mat[i] = 0;
-    // Sample covariance so reduce n by 1
-    n -= 1;
-    for(const auto& pose : best_cluster) {
-        double yaw_diff = ang_diff(quat_to_yaw(pose.orientation), avg_yaw);
-        cov_mat[0]  += pow(pose.position.x - avg_point.x, 2) / n;
-        cov_mat[1]  += (pose.position.x - avg_point.x) 
-                     * (pose.position.y - avg_point.y) / n;
-        cov_mat[5]  += (pose.position.x - avg_point.x) * yaw_diff / n;
-        cov_mat[7]  += pow(pose.position.y - avg_point.y, 2) / n;
-        cov_mat[11] += (pose.position.y - avg_point.y) * yaw_diff / n;
-        cov_mat[35] += pow(yaw_diff, 2) / n;
-    }
-    
-    // Make the matrix symmetric
-    cov_mat[6]  = cov_mat[1];  // y-x , x-y 
-    cov_mat[30] = cov_mat[5];  // th-x, x-th
-    cov_mat[31] = cov_mat[11]; // th-y, y-th
+    const auto& best_cluster = clustered_poses[best_it];
 
     pose_estimate_.header.stamp = ros::Time::now();
-    pose_estimate_.pose.pose.position = avg_point;
-    pose_estimate_.pose.pose.orientation = yaw_to_quat(avg_yaw);
+    pose_estimate_.pose = calculate_pose_with_covariance(best_cluster);
 }
 
 // TODO: Consider trying KLD_Sampling_MCL from Probabilistic Robotics

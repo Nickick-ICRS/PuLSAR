@@ -2,6 +2,7 @@
     <arg name="num_robots" default="1"/>
     <arg name="valgrind" default="false"/>
     <arg name="gdb" default="false"/>
+    <arg name="localiser" default="mcl"/>
 
     <arg name="prefix" value="$(eval 'valgrind --tool=callgrind --callgrind-out-file=/tmp/callgrind.out' if arg('valgrind') else 'gdb --args' if arg('gdb') else '')"/>
     <node name="pulsar_localisation" pkg="pulsar_localisation"
@@ -78,5 +79,8 @@
         <param name="min_trans_update" value="0.004"/>
         <!-- Update frequency (Hz) of the filter -->
         <param name="update_rate" value="15"/>
+
+        <!-- Which localisation algorithm to use -->
+        <param name="robot_localiser" value="$(arg localiser)"/>
     </node>
 </launch>

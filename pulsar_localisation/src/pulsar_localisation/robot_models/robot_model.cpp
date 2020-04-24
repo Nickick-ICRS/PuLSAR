@@ -26,6 +26,24 @@ RobotModel::~RobotModel() {
     // dtor
 }
 
+void RobotModel::update_odom() {
+    std::lock_guard<std::mutex> lock(odom_mut_);
+    prev_odom_ = recent_odom_;
+}
+
+double RobotModel::weigh_pose(const geometry_msgs::Pose& p) {
+    const auto Z = cloud_gen_->get_raw_data(name_);
+    return range_model_.model(p, Z, name_, base_link_frame_);
+}
+
+geometry_msgs::Pose RobotModel::sample_motion_model_odometry(
+    const geometry_msgs::Pose& xt_1)
+{
+    std::lock_guard<std::mutex> lock(odom_mut_);
+    return sample_motion_model_odometry(
+        recent_odom_.pose.pose, prev_odom_.pose.pose, xt_1);
+}
+
 geometry_msgs::Pose RobotModel::sample_motion_model_odometry(
     const geometry_msgs::Pose& ut, const geometry_msgs::Pose& ut_1, 
     const geometry_msgs::Pose& xt_1)
@@ -112,4 +130,27 @@ void RobotModel::odom_cb(
         first_odom_cb_ = false;
         prev_odom_ = *msg;
     }
+}
+
+geometry_msgs::TransformStamped RobotModel::calculate_transform(
+        const geometry_msgs::Pose& p)
+{
+    std::lock_guard<std::mutex> lock(odom_mut_);
+    double mRo = quat_to_yaw(p.orientation)
+               - quat_to_yaw(recent_odom_.pose.pose.orientation);
+
+    // Create the message and return
+    geometry_msgs::TransformStamped tf;
+    tf.header.stamp = ros::Time::now();
+    tf.header.frame_id = map_frame_;
+    tf.child_frame_id = recent_odom_.header.frame_id;
+    double oTbx = recent_odom_.pose.pose.position.x * cos(mRo)
+                - recent_odom_.pose.pose.position.y * sin(mRo);
+    double oTby = recent_odom_.pose.pose.position.y * cos(mRo)
+                + recent_odom_.pose.pose.position.x * sin(mRo);
+
+    tf.transform.translation.x = p.position.x - oTbx;
+    tf.transform.translation.y = p.position.y - oTby;
+    tf.transform.rotation = yaw_to_quat(mRo);
+    return tf;
 }

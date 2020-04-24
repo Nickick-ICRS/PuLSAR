@@ -7,6 +7,8 @@
 
 #include <ros/ros.h>
 #include <nav_msgs/Odometry.h>
+#include <geometry_msgs/Pose.h>
+#include <geometry_msgs/TransformStamped.h>
 
 #include "cloud_generator/cloud_generator.hpp"
 #include "map_manager/map_manager.hpp"
@@ -84,6 +86,48 @@ public:
      * @brief Samples from p(xt | ut, xt-1).
      *
      * Sample from p(xt | ut, xt-1) given odometry information. See 
+     * Probabilistic Robotics by Thrun et al. Uses the odometry stored in
+     * this class.
+     *
+     * @param xt_1 The most recent pose estimate.
+     *
+     * @return The current (new) pose estimate.
+     */
+    geometry_msgs::Pose sample_motion_model_odometry(
+        const geometry_msgs::Pose& xt_1);
+
+    /**
+     * @brief Call this after each full pose estimate iteration.
+     *
+     * Updates the odom useage. Call this after and iteration has been
+     * completed successfully. Failure to call will result in increasingly
+     * large jumps in the odometry sampler!
+     */
+    void update_odom();
+
+    /**
+     * Weigh the validity of an estimated pose based upon sensor models.
+     *
+     * @param p The pose to be weighed.
+     *
+     * @return The weight.
+     */
+    double weigh_pose(const geometry_msgs::Pose& p);
+
+    /**
+     * Calculate the transform from the map frame to the odometry frame.
+     *
+     * @param p The pose relative to the map frame that the robot is at.
+     *
+     * @return The transform to be published to TF.
+     */
+    geometry_msgs::TransformStamped calculate_transform(
+        const geometry_msgs::Pose& p);
+protected:
+    /**
+     * @brief Samples from p(xt | ut, xt-1).
+     *
+     * Sample from p(xt | ut, xt-1) given odometry information. See 
      * Probabilistic Robotics by Thrun et al.
      *
      * @param ut The most recent odometry measurement.
@@ -98,7 +142,6 @@ public:
         const geometry_msgs::Pose& ut, const geometry_msgs::Pose& ut_1,
         const geometry_msgs::Pose& xt_1);
 
-protected:
     std::string name_;
     std::string base_link_frame_;
     std::string map_frame_;

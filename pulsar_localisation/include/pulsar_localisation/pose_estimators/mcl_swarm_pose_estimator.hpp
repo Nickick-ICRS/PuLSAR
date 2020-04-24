@@ -4,8 +4,10 @@
 #include <map>
 #include <vector>
 #include <memory>
+#include <random>
 
 #include <geometry_msgs/Pose.h>
+#include <tf2_ros/transform_broadcaster.h>
 
 #include "pose_estimators/swarm_pose_estimator.hpp"
 #include "robot_models/robot_model.hpp"
@@ -45,6 +47,9 @@ public:
      * @param robot_radii Map of the robot radii keyed by name.
      *
      * @param M The number of particles to include in the particle filter.
+     *
+     * @param min_trans_update Minimum robot movement to consider when
+     *                         calculating the odometry motion model.
      */
     MCLSwarmPoseEstimator(
         const std::shared_ptr<CloudGenerator>& cloud_gen,
@@ -53,7 +58,8 @@ public:
         std::map<std::string, geometry_msgs::Pose>& initial_robot_poses,
         std::map<std::string, std::string>& robot_odom_topics,
         std::map<std::string, std::string>& robot_base_links,
-        std::map<std::string, float>& robot_radii, unsigned int M);
+        std::map<std::string, float>& robot_radii, unsigned int M,
+        double min_trans_update);
     ~MCLSwarmPoseEstimator();
 
     /**
@@ -64,6 +70,60 @@ public:
      */
     void update_estimate();
 private:
+    /**
+     * Updates the pose cloud based on odometry estimates from each robot.
+     */
+    void update_odometry_estimates();
+
+    /**
+     * Assigns pose estimates to robots based on proximity.
+     */
+    void assign_robot_pose_estimates();
+
+    /**
+     * Weighs points and selects points to be kept based on their weight.
+     */
+    void weigh_and_keep_points();
+
+    /**
+     * Updates individual robot pose estimates, calculates their transforms
+     * and publishes to TF.
+     */
+    void update_robot_pose_estimates();
+    
+    /**
+     * Gets the closest robots to a requested point.
+     *
+     * @param p The pose to compare robot locations to.
+     *
+     * @return The closest X robots to the requested point.
+     */
+    std::vector<std::string> get_closest_robots(
+        const geometry_msgs::Pose& p);
+
+    const std::shared_ptr<MapManager>& map_man_;
+
+    std::vector<geometry_msgs::Pose> pose_cloud_;
+    std::vector<std::pair<std::string, geometry_msgs::Pose>> 
+        unbounded_pose_cloud_;
+    std::map<std::string, std::unique_ptr<RobotModel>> robot_models_;
+    std::map<std::string, std::vector<geometry_msgs::Pose>>
+        robot_pose_clouds_;
+    std::map<std::string, float> radii_;
+
+    std::random_device rd_;
+    std::mt19937_64 gen_;
+    std::uniform_real_distribution<double> dist_;
+
+    tf2_ros::TransformBroadcaster tf_broadcaster_;
+
+    unsigned int M_;
+
+    // How many robots should we consider when finding the closest robots to
+    // a given pose?
+    int num_close_robots_;
+    // Minimum number of points to be considered per robot
+    double min_robot_cloud_size_;
 };
 
 #endif // __MCL_SWARM_POSE_ESTIMATOR_HPP__

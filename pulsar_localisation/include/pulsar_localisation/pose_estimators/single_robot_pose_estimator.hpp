@@ -41,23 +41,6 @@ public:
 
 protected:
     geometry_msgs::PoseWithCovarianceStamped pose_estimate_;
-
-    /**
-     * @brief Calculates the transform from the odom frame to the map frame.
-     *
-     * As we are estimating from the base_link frame to the map frame,
-     * using odometry information, our pose estimate is map->base_link.
-     * However, we need to publish map->odom, which is what this function
-     * calculates.
-     *
-     * @param odom The most recent odometry message that the filter was 
-                  updated with.
-     * 
-     * @return The transform from the map frame to the frame of the odometry
-     *         message (odom).
-     */
-    geometry_msgs::TransformStamped calculate_transform(
-        const nav_msgs::Odometry& odom);
 };
 
 #endif // __SINGLE_ROBOT_POSE_ESTIMATOR_HPP__
