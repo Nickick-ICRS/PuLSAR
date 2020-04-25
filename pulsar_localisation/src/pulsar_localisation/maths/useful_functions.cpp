@@ -55,6 +55,8 @@ geometry_msgs::PoseWithCovariance calculate_pose_with_covariance(
     while(avg_yaw > M_PI) avg_yaw -= 2*M_PI;
     while(avg_yaw <= -M_PI) avg_yaw += 2*M_PI;
 
+    ret.pose.orientation = yaw_to_quat(avg_yaw);
+
     auto& cov_mat = ret.covariance;
 
     n -= 1;

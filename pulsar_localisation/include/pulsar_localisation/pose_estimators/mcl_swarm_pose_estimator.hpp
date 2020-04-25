@@ -100,6 +100,21 @@ private:
      */
     std::vector<std::string> get_closest_robots(
         const geometry_msgs::Pose& p);
+    
+    /**
+     * Matches each robot to a cluster ID after pose clustering.
+     *
+     * @param point_IDs Vector containing the cluster ID of each point in 
+     * the pose_cloud_ vector.
+     *
+     * @param means Map of the means of each cluster.
+     *
+     * @return Map between robot names and cluster IDs.
+     */
+    std::map<std::string, unsigned int>
+        match_robots_to_clusters(
+            const std::vector<unsigned int>& clustered_points,
+            const std::map<unsigned int, geometry_msgs::Pose>& means);
 
     const std::shared_ptr<MapManager>& map_man_;
 
@@ -124,6 +139,8 @@ private:
     int num_close_robots_;
     // Minimum number of points to be considered per robot
     double min_robot_cloud_size_;
+
+    friend class LocalisationNode;
 };
 
 #endif // __MCL_SWARM_POSE_ESTIMATOR_HPP__

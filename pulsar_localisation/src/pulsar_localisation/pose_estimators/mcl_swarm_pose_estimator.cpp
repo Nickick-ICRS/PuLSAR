@@ -1,6 +1,7 @@
 #include "pose_estimators/mcl_swarm_pose_estimator.hpp"
 
 #include "maths/useful_functions.hpp"
+#include "maths/kmeans.hpp"
 
 #include <chrono>
 #include <cmath>
@@ -193,9 +194,6 @@ void MCLSwarmPoseEstimator::weigh_and_keep_points() {
         return robot_pose_clouds_[name][count];
     };
 
-    // Temporary map so we can replace the robot_pose_clouds_ map when 
-    // we're done
-    std::map<std::string, std::vector<geometry_msgs::Pose>> temp_pose_map_;
     pose_cloud_.clear();
     while(pose_cloud_.size() < M_) {
         r = dist_(gen_);
@@ -204,11 +202,46 @@ void MCLSwarmPoseEstimator::weigh_and_keep_points() {
         const auto& name = robot_names[(int)r];
         const auto& pose = random_pose_from_robot_cloud(name);
         pose_cloud_.push_back(pose);
-        temp_pose_map_[name].push_back(pose);
     }
 
+    // Cluster the pose cloud
+    KMeans kmeans(pose_cloud_);
+    // Initialise the cluster with the previous pose estimates
+    std::vector<geometry_msgs::Pose> init;
+    for(const auto& name : robot_names) {
+        const auto& pwcs = robot_pose_estimates_[name];
+        init.push_back(pwcs.pose.pose);
+    }
+    auto cluster_ids = kmeans.run(robot_names.size(), init);
+
+/* 
+    // Match each robot to a cluster
+    auto means = kmeans.get_means();
+    auto robot_cluster_map = match_robots_to_clusters(
+        cluster_ids, means);
+*/
+
+    // Temporary map to store robot pose estimates
+    std::map<std::string, std::vector<geometry_msgs::Pose>> temp_pose_map;
+    for(unsigned int i = 0; i < cluster_ids.size(); i++) {
+        unsigned int ID = cluster_ids[i];
+        temp_pose_map[robot_names[ID]].push_back(pose_cloud_[i]);
+    }
+
+/*
+    for(const auto& pair : robot_cluster_map) {
+        const auto& name = pair.first;
+        const auto& id = pair.second;
+        for(int i = 0; i < cluster_ids.size(); i++) {
+            if(cluster_ids[i] == id) {
+                temp_pose_map[name].push_back(pose_cloud_[name]);
+            }
+        }
+    }
+*/
+
     // Ensure that we have enough points for each robot estimate
-    for(auto& pair : temp_pose_map_) {
+    for(auto& pair : temp_pose_map) {
         const auto& name = pair.first;
         auto& vec = pair.second;
         while(vec.size() < min_robot_cloud_size_) {
@@ -217,7 +250,7 @@ void MCLSwarmPoseEstimator::weigh_and_keep_points() {
     }
 
     // Update the new robot_pose_cloud_ map
-    robot_pose_clouds_ = temp_pose_map_;
+    robot_pose_clouds_ = temp_pose_map;
 }
 
 void MCLSwarmPoseEstimator::update_robot_pose_estimates() {
@@ -232,4 +265,22 @@ void MCLSwarmPoseEstimator::update_robot_pose_estimates() {
         tf_broadcaster_.sendTransform(tf);
         map_man_->set_robot_pose(name, pose.pose, radii_[name]);
     }
+}
+
+
+std::map<std::string, unsigned int>
+    MCLSwarmPoseEstimator::match_robots_to_clusters(
+        const std::vector<unsigned int>& clustered_points,
+        const std::map<unsigned int, geometry_msgs::Pose>& means)
+{
+    static auto l2 = [](
+        const geometry_msgs::Pose& rbt, 
+        const geometry_msgs::Pose& cluster_mean) 
+    {
+        double dx = rbt.position.x - cluster_mean.position.x;
+        double dy = rbt.position.y - cluster_mean.position.y;
+        return dx * dx + dy * dy;
+    };
+
+    // Initial assignments 
 }

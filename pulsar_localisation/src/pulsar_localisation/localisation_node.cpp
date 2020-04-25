@@ -59,7 +59,7 @@ private:
     /**
      * Class to handle swarm pose estimates.
      */
-    std::unique_ptr<SwarmPoseEstimator> pose_est_;
+    std::shared_ptr<SwarmPoseEstimator> pose_est_;
 
     /**
      * Class to handle the map of the environment.
@@ -198,10 +198,10 @@ void LocalisationNode::loop() {
         cloud_gen_->publish_cloud("pulsar_0");
         pose_est_->publish_pose_estimate();
         //auto& pts = pose_est_->robot_pose_estimators_["pulsar_0"]->get_pose_estimates();
-        auto& pts = pose_est_->get_pose_estimates();
+        auto& pts = std::static_pointer_cast<MCLSwarmPoseEstimator>(pose_est_)->pose_cloud_;
         c.poses.clear();
-        for(auto& pair : pts) {
-            c.poses.push_back(pair.second.pose.pose);
+        for(const auto& p : pts) {
+            c.poses.push_back(p);
         }
         c.header.stamp = ros::Time::now();
         pub.publish(c);
