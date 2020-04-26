@@ -1,13 +1,8 @@
-#include "robot_models/robot_model.hpp"
+#include "robot_models/base_robot_model.hpp"
 
 #include "maths/useful_functions.hpp"
 
-double RobotModel::a1_,
-       RobotModel::a2_,
-       RobotModel::a3_,
-       RobotModel::a4_;
-
-RobotModel::RobotModel(
+BaseRobotModel::BaseRobotModel(
     std::string name, const std::shared_ptr<CloudGenerator>& cloud_gen,
     const std::shared_ptr<MapManager>& map_man, std::string map_frame,
     std::string odom_topic, std::string base_link_frame, float radius,
@@ -19,64 +14,15 @@ RobotModel::RobotModel(
     min_trans_update_(min_trans_update), first_odom_cb_(true)
 {
     odom_sub_ = nh_.subscribe(
-        odom_topic, 1, &RobotModel::odom_cb, this);
+        odom_topic, 1, &BaseRobotModel::odom_cb, this);
 }
 
-RobotModel::~RobotModel() {
+BaseRobotModel::~BaseRobotModel() {
     // dtor
 }
 
-void RobotModel::update_odom() {
-    std::lock_guard<std::mutex> lock(odom_mut_);
-    prev_odom_ = recent_odom_;
-}
-
-double RobotModel::weigh_pose(const geometry_msgs::Pose& p) {
-    const auto Z = cloud_gen_->get_raw_data(name_);
-    return range_model_.model(p, Z, name_, base_link_frame_);
-}
-
-geometry_msgs::Pose RobotModel::sample_motion_model_odometry(
-    const geometry_msgs::Pose& xt_1)
-{
-    std::lock_guard<std::mutex> lock(odom_mut_);
-    return sample_motion_model_odometry(
-        recent_odom_.pose.pose, prev_odom_.pose.pose, xt_1);
-}
-
-geometry_msgs::Pose RobotModel::sample_motion_model_odometry(
-    const geometry_msgs::Pose& ut, const geometry_msgs::Pose& ut_1, 
-    const geometry_msgs::Pose& xt_1)
-{
-    double tht = quat_to_yaw(ut.orientation);
-    double tht_1 = quat_to_yaw(ut_1.orientation);
-    double drot1 = atan2(ut.position.y - ut_1.position.y,
-                        ut.position.x - ut_1.position.x) - tht_1;
-    double dtrans = sqrt(pow(ut_1.position.x - ut.position.x, 2) +
-                         pow(ut_1.position.y - ut.position.y, 2));
-    if(dtrans <= min_trans_update_) {
-        drot1 = 0;
-    }
-    double drot2 = tht - tht_1 - drot1;
-
-    double sdrot1 = drot1 - sample_normal_distribution(
-        a1_ * drot1 * drot1 + a2_ * dtrans * dtrans);
-    double sdtrans = dtrans - sample_normal_distribution(
-        a3_ * dtrans * dtrans + a4_ * drot1 * drot1 + a4_ * drot2 * drot2);
-    double sdrot2 = drot2 - sample_normal_distribution(
-        a1_ * drot2 * drot2 + a2_ * dtrans * dtrans);
-
-    geometry_msgs::Pose xt;
-    xt.position.x = xt_1.position.x + sdtrans * cos(tht_1 + sdrot1);
-    xt.position.y = xt_1.position.y + sdtrans * sin(tht_1 + sdrot1);
-
-    double th = quat_to_yaw(xt_1.orientation) + sdrot1 + sdrot2;
-    xt.orientation = yaw_to_quat(th);
-    return xt;
-}
-
 geometry_msgs::Pose 
-    RobotModel::gen_random_valid_pose_position(double yaw)
+    BaseRobotModel::gen_random_valid_pose_position(double yaw)
 {
     static std::uniform_real_distribution<double> xdist(/*map dims*/-1, 1);
     static std::uniform_real_distribution<double> ydist(/*map dims*/-1, 1);
@@ -91,7 +37,12 @@ geometry_msgs::Pose
     return pose;
 }
 
-geometry_msgs::Pose RobotModel::gen_random_valid_pose() {
+void BaseRobotModel::update_odom() {
+    std::lock_guard<std::mutex> lock(odom_mut_);
+    prev_odom_ = recent_odom_;
+}
+
+geometry_msgs::Pose BaseRobotModel::gen_random_valid_pose() {
     static std::uniform_real_distribution<double> thdist(-M_PI, M_PI);
     geometry_msgs::Pose pose(gen_random_valid_pose_position(0));
     do {
@@ -103,7 +54,7 @@ geometry_msgs::Pose RobotModel::gen_random_valid_pose() {
     return pose;
 }
 
-geometry_msgs::Pose RobotModel::gen_random_valid_pose(
+geometry_msgs::Pose BaseRobotModel::gen_random_valid_pose(
     const geometry_msgs::PoseWithCovariance& p) 
 {
     geometry_msgs::Pose pose = p.pose;
@@ -121,7 +72,7 @@ geometry_msgs::Pose RobotModel::gen_random_valid_pose(
     return pose;
 }
 
-void RobotModel::odom_cb(
+void BaseRobotModel::odom_cb(
     const nav_msgs::OdometryConstPtr& msg)
 {
     std::lock_guard<std::mutex> lock(odom_mut_);
@@ -132,7 +83,7 @@ void RobotModel::odom_cb(
     }
 }
 
-geometry_msgs::TransformStamped RobotModel::calculate_transform(
+geometry_msgs::TransformStamped BaseRobotModel::calculate_transform(
         const geometry_msgs::Pose& p)
 {
     std::lock_guard<std::mutex> lock(odom_mut_);

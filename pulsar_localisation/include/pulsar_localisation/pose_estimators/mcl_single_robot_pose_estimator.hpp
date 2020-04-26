@@ -12,7 +12,6 @@
 #include <tf2_ros/transform_broadcaster.h>
 
 #include "pose_estimators/single_robot_pose_estimator.hpp"
-#include "robot_models/robot_model.hpp"
 #include "cloud_generator/cloud_generator.hpp"
 #include "sensor_models/range_cloud_sensor_model.hpp"
 #include "map_manager/map_manager.hpp"

@@ -10,7 +10,7 @@ SingleRobotPoseEstimator::SingleRobotPoseEstimator(
     std::string odom_topic, std::string base_link_frame, float radius,
     double min_trans_update, geometry_msgs::Pose initial_pose)
 
-    :RobotModel(name, cloud_gen, map_man, map_frame, odom_topic, 
+    :OdometryRobotModel(name, cloud_gen, map_man, map_frame, odom_topic, 
     base_link_frame, radius, min_trans_update)
 {
     pose_estimate_.pose.pose = initial_pose;

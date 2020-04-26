@@ -136,6 +136,20 @@ public:
      * Publishes the maps so that they may be visualized for debugging.
      */
     void publish_maps();
+
+    /**
+     * Gets the width of the map.
+     *
+     * @return The width.
+     */
+    double get_width() { return map_width_ * map_res_; };
+
+    /**
+     * Gets the height of the map.
+     *
+     * @return The height.
+     */
+    double get_height() { return map_height_ * map_res_; };
 private:
     /**
      * Callback to receive the map stored on the map server.

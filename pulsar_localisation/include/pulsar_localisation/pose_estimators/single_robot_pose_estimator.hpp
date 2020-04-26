@@ -8,12 +8,12 @@
 #include <geometry_msgs/TransformStamped.h>
 #include <nav_msgs/Odometry.h>
 
-#include "robot_models/robot_model.hpp"
+#include "robot_models/odometry_robot_model.hpp"
 
 /**
  * Abstract class to represent a single robot pose estimator.
  */
-class SingleRobotPoseEstimator :public RobotModel {
+class SingleRobotPoseEstimator :public OdometryRobotModel {
 public:
     /**
      * Constructs a SingleRobotPoseEstimator instance.

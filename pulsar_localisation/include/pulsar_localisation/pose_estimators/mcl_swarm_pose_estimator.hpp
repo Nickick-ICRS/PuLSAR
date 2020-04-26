@@ -10,7 +10,7 @@
 #include <tf2_ros/transform_broadcaster.h>
 
 #include "pose_estimators/swarm_pose_estimator.hpp"
-#include "robot_models/robot_model.hpp"
+#include "robot_models/base_robot_model.hpp"
 #include "map_manager/map_manager.hpp"
 #include "cloud_generator/cloud_generator.hpp"
 
@@ -121,7 +121,7 @@ private:
     std::vector<geometry_msgs::Pose> pose_cloud_;
     std::vector<std::pair<std::string, geometry_msgs::Pose>> 
         unbounded_pose_cloud_;
-    std::map<std::string, std::unique_ptr<RobotModel>> robot_models_;
+    std::map<std::string, std::unique_ptr<BaseRobotModel>> robot_models_;
     std::map<std::string, std::vector<geometry_msgs::Pose>>
         robot_pose_clouds_;
     std::map<std::string, float> radii_;

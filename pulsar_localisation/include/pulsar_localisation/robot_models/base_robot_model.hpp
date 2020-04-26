@@ -1,5 +1,5 @@
-#ifndef __ROBOT_MODEL_HPP__
-#define __ROBOT_MODEL_HPP__
+#ifndef __BASE_ROBOT_MODEL_HPP__
+#define __BASE_ROBOT_MODEL_HPP__
 
 #include <random>
 #include <memory>
@@ -15,9 +15,10 @@
 #include "sensor_models/range_cloud_sensor_model.hpp"
 
 /**
- * @brief Contains the sensor and motion models for a single robot.
+ * Abstract class to represent a robot model, including sensor and motion
+ * models.
  */
-class RobotModel {
+class BaseRobotModel {
 public:
     /**
      * Constructor for the RobotModel class.
@@ -37,12 +38,12 @@ public:
      *
      * @param min_trans_update Minimum movement for translation update.
      */
-    RobotModel(
+    BaseRobotModel(
         std::string name, const std::shared_ptr<CloudGenerator>& cloud_gen,
         const std::shared_ptr<MapManager>& map_man, std::string map_frame,
         std::string odom_topic, std::string base_link_frame, float radius,
         double min_trans_update);
-    virtual ~RobotModel();
+    virtual ~BaseRobotModel();
 
     /**
      * @brief Generates a random valid pose for the robot.
@@ -83,18 +84,18 @@ public:
         const geometry_msgs::PoseWithCovariance& p);
 
     /**
-     * @brief Samples from p(xt | ut, xt-1).
+     * @brief Sample a motion model to predict the robot's position.
      *
-     * Sample from p(xt | ut, xt-1) given odometry information. See 
-     * Probabilistic Robotics by Thrun et al. Uses the odometry stored in
-     * this class.
+     * Samples from a motion model (e.g. pure odometry, odometry + sensor)
+     * to generate a prediction of a robot pose, given the previous pose
+     * estimate and current sensor information collected.
      *
-     * @param xt_1 The most recent pose estimate.
+     * @param xt_1 The estimated previous robot position.
      *
-     * @return The current (new) pose estimate.
+     * @return The estimated new robot position.
      */
-    geometry_msgs::Pose sample_motion_model_odometry(
-        const geometry_msgs::Pose& xt_1);
+    virtual geometry_msgs::Pose sample_motion_model(
+        const geometry_msgs::Pose& xt_1) = 0;
 
     /**
      * @brief Call this after each full pose estimate iteration.
@@ -112,7 +113,7 @@ public:
      *
      * @return The weight.
      */
-    double weigh_pose(const geometry_msgs::Pose& p);
+    virtual double weigh_pose(const geometry_msgs::Pose& p) = 0;
 
     /**
      * Calculate the transform from the map frame to the odometry frame.
@@ -123,25 +124,8 @@ public:
      */
     geometry_msgs::TransformStamped calculate_transform(
         const geometry_msgs::Pose& p);
-protected:
-    /**
-     * @brief Samples from p(xt | ut, xt-1).
-     *
-     * Sample from p(xt | ut, xt-1) given odometry information. See 
-     * Probabilistic Robotics by Thrun et al.
-     *
-     * @param ut The most recent odometry measurement.
-     *
-     * @param ut_1 The previously used odometry measurement.
-     *
-     * @param xt_1 The most recent pose estimate.
-     *
-     * @return The current (new) pose estimate.
-     */
-    geometry_msgs::Pose sample_motion_model_odometry(
-        const geometry_msgs::Pose& ut, const geometry_msgs::Pose& ut_1,
-        const geometry_msgs::Pose& xt_1);
 
+protected:
     std::string name_;
     std::string base_link_frame_;
     std::string map_frame_;
@@ -161,6 +145,8 @@ protected:
     const std::shared_ptr<MapManager> map_man_;
     RangeCloudSensorModel range_model_;
 
+    double min_trans_update_;
+
 private: 
     /**
      * Odometry callback from the robot.
@@ -171,15 +157,6 @@ private:
 
     bool first_odom_cb_;
     ros::Subscriber odom_sub_;
-
-    double min_trans_update_;
-
-    // Robot noise parameters
-    static double a1_, a2_, a3_, a4_;
-
-    // Saves us a lot of constructor parameters by having the above params
-    // be static and making this class able to access them.
-    friend class LocalisationNode;
 };
 
-#endif // __ROBOT_MODEL_HPP__
+#endif // __BASE_ROBOT_MODEL_HPP__

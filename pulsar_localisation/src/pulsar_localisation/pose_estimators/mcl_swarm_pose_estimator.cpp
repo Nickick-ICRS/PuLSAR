@@ -3,6 +3,9 @@
 #include "maths/useful_functions.hpp"
 #include "maths/kmeans.hpp"
 
+#include "robot_models/odometry_robot_model.hpp"
+#include "robot_models/scan_matching_robot_model.hpp"
+
 #include <chrono>
 #include <cmath>
 
@@ -22,7 +25,7 @@ MCLSwarmPoseEstimator::MCLSwarmPoseEstimator(
     dist_(0, 1)
 {
     for(const auto& name : robot_names) {
-        robot_models_[name].reset(new RobotModel(
+        robot_models_[name].reset(new ScanMatchingRobotModel(
             name, cloud_gen, map_man, map_frame, robot_odom_topics[name], 
             robot_base_links[name], robot_radii[name], min_trans_update));
         robot_pose_estimates_[name].header.frame_id = map_frame;
@@ -82,7 +85,7 @@ void MCLSwarmPoseEstimator::update_odometry_estimates() {
         std::vector<std::string> closest_bots = get_closest_robots(pose);
         for(const auto& name : closest_bots) {
             unbounded_pose_cloud_.emplace_back(name,
-                robot_models_[name]->sample_motion_model_odometry(pose));
+                robot_models_[name]->sample_motion_model(pose));
         }
     }
 }
@@ -137,7 +140,7 @@ void MCLSwarmPoseEstimator::assign_robot_pose_estimates() {
         while(vec.size() < min_robot_cloud_size_ && counter < MAX) {
             auto pose = robot_models_[name]->gen_random_valid_pose(
                 robot_pose_estimates_[name].pose);
-            pose = robot_models_[name]->sample_motion_model_odometry(pose);
+            pose = robot_models_[name]->sample_motion_model(pose);
 
             auto closest_bots = get_closest_robots(pose);
             for(const auto& bot : closest_bots) {
@@ -154,7 +157,7 @@ void MCLSwarmPoseEstimator::assign_robot_pose_estimates() {
                 << " points in " << name << "'s pose estimates.");
             auto pose = robot_models_[name]->gen_random_valid_pose(
                 robot_pose_estimates_[name].pose);
-            pose = robot_models_[name]->sample_motion_model_odometry(pose);
+            pose = robot_models_[name]->sample_motion_model(pose);
             auto closest_bots = get_closest_robots(pose);
         }
     }
@@ -195,13 +198,13 @@ void MCLSwarmPoseEstimator::weigh_and_keep_points() {
     };
 
     pose_cloud_.clear();
+    int n = 0;
     while(pose_cloud_.size() < M_) {
-        r = dist_(gen_);
-        if(r > 0.9999) r = 0.9999;
-        r *= robot_names.size();
-        const auto& name = robot_names[(int)r];
+        const auto& name = robot_names[n];
         const auto& pose = random_pose_from_robot_cloud(name);
         pose_cloud_.push_back(pose);
+        n++;
+        n %= robot_names.size();
     }
 
     // Cluster the pose cloud
@@ -212,14 +215,7 @@ void MCLSwarmPoseEstimator::weigh_and_keep_points() {
         const auto& pwcs = robot_pose_estimates_[name];
         init.push_back(pwcs.pose.pose);
     }
-    auto cluster_ids = kmeans.run(robot_names.size(), init);
-
-/* 
-    // Match each robot to a cluster
-    auto means = kmeans.get_means();
-    auto robot_cluster_map = match_robots_to_clusters(
-        cluster_ids, means);
-*/
+    auto cluster_ids = kmeans.run(robot_names.size(), init, 1);
 
     // Temporary map to store robot pose estimates
     std::map<std::string, std::vector<geometry_msgs::Pose>> temp_pose_map;
@@ -227,18 +223,6 @@ void MCLSwarmPoseEstimator::weigh_and_keep_points() {
         unsigned int ID = cluster_ids[i];
         temp_pose_map[robot_names[ID]].push_back(pose_cloud_[i]);
     }
-
-/*
-    for(const auto& pair : robot_cluster_map) {
-        const auto& name = pair.first;
-        const auto& id = pair.second;
-        for(int i = 0; i < cluster_ids.size(); i++) {
-            if(cluster_ids[i] == id) {
-                temp_pose_map[name].push_back(pose_cloud_[name]);
-            }
-        }
-    }
-*/
 
     // Ensure that we have enough points for each robot estimate
     for(auto& pair : temp_pose_map) {

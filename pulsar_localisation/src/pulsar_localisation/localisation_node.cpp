@@ -383,35 +383,35 @@ void LocalisationNode::get_ros_parameters() {
     }
 
     if(!ros::param::param<double>(
-        "~a1", RobotModel::a1_, 0.2))
+        "~a1", OdometryRobotModel::a1_, 0.2))
     {
         ROS_WARN_STREAM(
             "Failed to get param 'a1'. Defaulting to '"
-            << RobotModel::a1_ << "'.");
+            << OdometryRobotModel::a1_ << "'.");
     }
 
     if(!ros::param::param<double>(
-        "~a2", RobotModel::a2_, 0.2))
+        "~a2", OdometryRobotModel::a2_, 0.2))
     {
         ROS_WARN_STREAM(
             "Failed to get param 'a2'. Defaulting to '"
-            << RobotModel::a2_ << "'.");
+            << OdometryRobotModel::a2_ << "'.");
     }
 
     if(!ros::param::param<double>(
-        "~a3", RobotModel::a3_, 0.2))
+        "~a3", OdometryRobotModel::a3_, 0.2))
     {
         ROS_WARN_STREAM(
             "Failed to get param 'a3'. Defaulting to '"
-            << RobotModel::a3_ << "'.");
+            << OdometryRobotModel::a3_ << "'.");
     }
 
     if(!ros::param::param<double>(
-        "~a4", RobotModel::a4_, 0.2))
+        "~a4", OdometryRobotModel::a4_, 0.2))
     {
         ROS_WARN_STREAM(
             "Failed to get param 'a4'. Defaulting to '"
-            << RobotModel::a4_ << "'.");
+            << OdometryRobotModel::a4_ << "'.");
     }
 
     if(!ros::param::param<double>(

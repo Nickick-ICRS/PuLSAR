@@ -80,7 +80,9 @@ target_link_libraries(pulsar_map_manager
 
 add_library(pulsar_models
     src/pulsar_localisation/sensor_models/range_cloud_sensor_model.cpp
-    src/pulsar_localisation/robot_models/robot_model.cpp
+    src/pulsar_localisation/robot_models/base_robot_model.cpp
+    src/pulsar_localisation/robot_models/odometry_robot_model.cpp
+    src/pulsar_localisation/robot_models/scan_matching_robot_model.cpp
 )
 
 add_dependencies(pulsar_models
