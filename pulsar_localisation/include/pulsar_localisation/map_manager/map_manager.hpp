@@ -8,6 +8,9 @@
 #include <nav_msgs/OccupancyGrid.h>
 #include <geometry_msgs/Pose.h>
 
+#include <pcl/point_types.h>
+#include <pcl/kdtree/kdtree_flann.h>
+
 /**
  * Exception thrown by MapManager functions.
  */
@@ -150,6 +153,21 @@ public:
      * @return The height.
      */
     double get_height() { return map_height_ * map_res_; };
+
+    /**
+     * Get A KdTree of the map in point cloud form for fast nearest
+     * neighbour searches.
+     *
+     * @return A KdTree.
+     */
+    const pcl::KdTreeFLANN<pcl::PointXYZ>::Ptr& get_map_pcl_tree() {
+        return map_tree_;
+    };
+
+    const pcl::PointCloud<pcl::PointXYZ>::Ptr& get_map_cloud() {
+        return map_cloud_;
+    };
+
 private:
     /**
      * Callback to receive the map stored on the map server.
@@ -250,6 +268,11 @@ private:
     double map_res_;
     int map_height_;
     int map_width_;
+    pcl::PointCloud<pcl::PointXYZ>::Ptr map_cloud_;
+    pcl::KdTreeFLANN<pcl::PointXYZ>::Ptr map_tree_;
+
+    // For testing
+    friend class ScanMatchingRobotModel;
 };
 
 #endif // __MAP_MANAGER_HPP__

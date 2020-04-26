@@ -54,6 +54,22 @@ void MapManager::map_cb(const nav_msgs::OccupancyGridPtr& msg) {
     map_res_ = msg->info.resolution;
     map_height_ = msg->info.height;
     map_width_ = msg->info.width;
+
+    map_cloud_.reset(new pcl::PointCloud<pcl::PointXYZ>);
+    for(int c = 0; c < map_width_; c++) {
+        for(int r = 0; r < map_height_; r++) {
+            if(map_data_[r * map_height_ + c]) {
+                double x = c * cos(map_th_) - r * sin(map_th_) * map_res_
+                         + map_x_;
+                double y = r * cos(map_th_) + c * sin(map_th_) * map_res_
+                         + map_y_;
+                map_cloud_->push_back(pcl::PointXYZ(x, y, 0));
+            }
+        }
+    }
+    map_tree_.reset(new pcl::KdTreeFLANN<pcl::PointXYZ>);
+    map_tree_->setInputCloud(map_cloud_);
+    
     waiting_for_map_ = false;
 }
 

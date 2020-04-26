@@ -31,7 +31,7 @@
              cycle. The larger this is the slower the algorithm will
              perform. This should be a multiple of the number of sensors
              on the robots. -->
-        <param name="cycle_sensor_readings" value="9"/>
+        <param name="cycle_sensor_readings" value="3"/>
         <!-- 0.01 second resolution in time keeping for the range sensor
              model -->
         <param name="time_resolution" value="0.01"/>

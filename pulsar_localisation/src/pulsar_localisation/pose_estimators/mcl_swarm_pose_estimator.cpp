@@ -88,6 +88,8 @@ void MCLSwarmPoseEstimator::update_odometry_estimates() {
                 robot_models_[name]->sample_motion_model(pose));
         }
     }
+    for(const auto& pair : robot_models_)
+        pair.second->update_odom();
 }
 
 std::vector<std::string> MCLSwarmPoseEstimator::get_closest_robots(

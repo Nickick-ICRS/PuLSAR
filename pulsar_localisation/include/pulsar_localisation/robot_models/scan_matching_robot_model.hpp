@@ -67,6 +67,14 @@ public:
     virtual geometry_msgs::Pose sample_motion_model(
         const geometry_msgs::Pose& xt_1);
 
+    /**
+     * Weighs a pose based on how likely it is that it is correct.
+     *
+     * @return A weight based on how likely the point is correct. Large 
+     *         is good.
+     */
+    virtual double weigh_pose(const geometry_msgs::Pose& p);
+
 private:
     /**
      * @brief Adjusts a pose to fit the map.
