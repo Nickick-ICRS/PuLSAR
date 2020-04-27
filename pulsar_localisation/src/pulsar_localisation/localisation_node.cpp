@@ -10,6 +10,7 @@
 #include "pose_estimators/average_mcl_swarm_pose_estimator.hpp"
 #include "map_manager/map_manager.hpp"
 #include "sensor_models/range_cloud_sensor_model.hpp"
+#include "robot_models/scan_matching_robot_model.hpp"
 
 // Definitions of available swarm pose estimators
 #define MCL                 "mcl"
@@ -535,5 +536,13 @@ void LocalisationNode::get_ros_parameters() {
         ROS_WARN_STREAM(
             "Failed to get param 'robot_localiser'. Defaulting to '"
             << localiser_ << "'.");
+    }
+
+    if(!ros::param::param<double>(
+        "~lamcont", ScanMatchingRobotModel::lamcont_, 1))
+    {
+        ROS_WARN_STREAM(
+            "Failed to get param 'lamcont'. Defaulting to '"
+            << ScanMatchingRobotModel::lamcont_ << "'.");
     }
 }

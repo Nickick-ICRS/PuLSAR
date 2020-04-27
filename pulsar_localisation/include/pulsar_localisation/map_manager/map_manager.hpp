@@ -270,9 +270,6 @@ private:
     int map_width_;
     pcl::PointCloud<pcl::PointXYZ>::Ptr map_cloud_;
     pcl::KdTreeFLANN<pcl::PointXYZ>::Ptr map_tree_;
-
-    // For testing
-    friend class ScanMatchingRobotModel;
 };
 
 #endif // __MAP_MANAGER_HPP__

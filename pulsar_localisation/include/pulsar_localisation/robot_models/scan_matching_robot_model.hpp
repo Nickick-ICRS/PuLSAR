@@ -9,6 +9,8 @@
 #include <geometry_msgs/Pose.h>
 #include <geometry_msgs/Point.h>
 
+#include <pcl/point_types.h>
+
 #include "robot_models/odometry_robot_model.hpp"
 #include "map_manager/map_manager.hpp"
 #include "cloud_generator/cloud_generator.hpp"
@@ -82,11 +84,14 @@ private:
      * Takes a pose and attempts to find the closest fitting pose in the
      * map using the most recent range finder data.
      *
-     * @param p The pose to be adjusted.
+     * @param xt The current pose estimate to be adjusted.
+     *
+     * @param xt_1 The previous pose estimate.
      *
      * @return The adjusted pose.
      */
-    geometry_msgs::Pose scan_match_l2(const geometry_msgs::Pose& p);
+    geometry_msgs::Pose scan_match_l2(
+        const geometry_msgs::Pose& xt, const geometry_msgs::Pose& xt_1);
 
     /**
      * Move the scan measurement in one direction and find the optimal
@@ -122,8 +127,24 @@ private:
         const geometry_msgs::Pose& p,
         const std::vector<geometry_msgs::Point>& Z, Dir dir);
 
+    /**
+     * Gets the sensor data transformed into the robot coordinate frame.
+     *
+     * @param p The pose we want the data relative to.
+     *
+     * @return The sensor data in the robot coordinate frame.
+     */
+    pcl::PointCloud<pcl::PointXYZ>::Ptr get_sensor_data(
+        const geometry_msgs::Pose& p);
+
     tf2_ros::Buffer tf2_;
     tf2_ros::TransformListener tf_listener_;
+
+    // Parameter for adjusting how much continuity is worth when weighing
+    // a scan-matched pose.
+    static double lamcont_;
+
+    friend class LocalisationNode;
 };
 
 #endif // __SCAN_MATCHING_ROBOT_MODEL_HPP__

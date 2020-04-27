@@ -59,9 +59,9 @@ void MapManager::map_cb(const nav_msgs::OccupancyGridPtr& msg) {
     for(int c = 0; c < map_width_; c++) {
         for(int r = 0; r < map_height_; r++) {
             if(map_data_[r * map_height_ + c]) {
-                double x = c * cos(map_th_) - r * sin(map_th_) * map_res_
+                double x = (c * cos(map_th_) - r * sin(map_th_)) * map_res_
                          + map_x_;
-                double y = r * cos(map_th_) + c * sin(map_th_) * map_res_
+                double y = (r * cos(map_th_) + c * sin(map_th_)) * map_res_
                          + map_y_;
                 map_cloud_->push_back(pcl::PointXYZ(x, y, 0));
             }

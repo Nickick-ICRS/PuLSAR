@@ -64,9 +64,12 @@
         <!-- Exponential parameter representing how unreliable old data is 
              considered to be. >= 0, larger = more unreliable-->
         <param name="ztime" value="5"/>
+        <!-- Parameter for the importance of pose continuity when scan 
+             matching -->
+        <param name="lamcont" value="100"/>
 
         <!-- Number of particles to be included in the MCL filter -->
-        <param name="num_particles" value="500"/>
+        <param name="num_particles" value="50"/>
 
         <!-- Minimum number of pose estimates within a cluster to be
              considered as a cluster -->
