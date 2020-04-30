@@ -63,7 +63,9 @@ void MapManager::map_cb(const nav_msgs::OccupancyGridPtr& msg) {
                 bool edge = false;
                 for(int i = -1; i < 2; i++) {
                     for(int k = -1; k < 2; k++) {
-                        if(k != i) {
+                        if(k != i && r+i < map_height_ && r+i >= 0 && 
+                           c+k < map_width_ && c+k >= 0)
+                        {
                             if(!map_data_[(r+i) * map_height_ + c+k])
                                 edge = true;
                         }
