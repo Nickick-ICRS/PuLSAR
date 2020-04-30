@@ -69,7 +69,7 @@
         <param name="lamcont" value="100"/>
 
         <!-- Number of particles to be included in the MCL filter -->
-        <param name="num_particles" value="50"/>
+        <param name="num_particles" value="300"/>
 
         <!-- Minimum number of pose estimates within a cluster to be
              considered as a cluster -->

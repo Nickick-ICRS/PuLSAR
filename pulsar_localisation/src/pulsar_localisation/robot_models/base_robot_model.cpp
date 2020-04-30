@@ -77,6 +77,15 @@ void BaseRobotModel::odom_cb(
 {
     std::lock_guard<std::mutex> lock(odom_mut_);
     recent_odom_ = *msg;
+    // Normalise and planarise the orientation
+    recent_odom_.pose.pose.orientation.x = 0;
+    recent_odom_.pose.pose.orientation.y = 0;
+    double norm = sqrt(
+        pow(recent_odom_.pose.pose.orientation.z, 2) +
+        pow(recent_odom_.pose.pose.orientation.w, 2));
+    recent_odom_.pose.pose.orientation.z /= norm;
+    recent_odom_.pose.pose.orientation.w /= norm;
+
     if(first_odom_cb_) {
         first_odom_cb_ = false;
         prev_odom_ = *msg;

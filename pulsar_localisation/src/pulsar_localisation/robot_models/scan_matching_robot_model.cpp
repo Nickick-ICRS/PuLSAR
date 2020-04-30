@@ -88,6 +88,8 @@ geometry_msgs::Pose ScanMatchingRobotModel::scan_match_l2(
     Eigen::fromMsg(xt, eig_posed);
     eig_pose = eig_posed.cast<float>();
 
+    double MAX_TRANS(0.05);
+
     auto tree = map_man_->get_map_pcl_tree();
     auto map_cloud = map_man_->get_map_cloud();
     double best_err = std::numeric_limits<double>::max();
@@ -102,10 +104,18 @@ geometry_msgs::Pose ScanMatchingRobotModel::scan_match_l2(
         // Find the nearest point to this measurement on the map
         tree->nearestKSearch(z, 1, index, dist);
         auto pt = map_cloud->at(index[0]);
-        // Transform the scan to that point
-        Eigen::Affine3f aff(Eigen::Translation3f(pt.x-z.x, pt.y-z.y, 0));
+        // Transform the scan to that point, along the forwards vector
+        Eigen::Vector3f tp(pt.x-z.x, pt.y-z.y, 0);
+        Eigen::Vector3f forw = eig_pose.linear() * Eigen::Vector3f::UnitX();
+        forw = forw.normalized();
+        tp = tp.dot(forw) * forw;
+        if(tp.norm() > MAX_TRANS)
+            tp *= MAX_TRANS / tp.norm();
+        Eigen::Affine3f aff(Eigen::Affine3f::Identity());
+        aff.translation() = Eigen::Translation3f(tp).translation();
         pcl::transformPointCloud(*Z_pcl, Z_trans, aff);
         Eigen::Affine3f eig_pose_translated = aff * eig_pose;
+        /*
 
         // To transform the cloud to the origin when rotating about the 
         // point
@@ -143,27 +153,26 @@ geometry_msgs::Pose ScanMatchingRobotModel::scan_match_l2(
             pcl::transformPointCloud(
                 Z_rot, Z_final, Eigen::Affine3f(trans));
             eig_pose_rot *= trans;
-
+            */
             double l2_err;
-            for(const auto& z3 : Z_final) {
+            for(const auto& z3 : Z_trans/*final*/) {
                 tree->nearestKSearch(z3, 1, index, dist);
                 l2_err += pow(dist[0], 2);
             }
             // Finally, add the l2err of the distance between the poses
-            double dx = eig_pose_rot.translation().x() - xt_1.position.x;
-            double dy = eig_pose_rot.translation().y() - xt_1.position.y;
-            double dth = eig_pose_rot.rotation().eulerAngles(2, 1, 0)[0]
-                       - quat_to_yaw(xt_1.orientation);
+            double dx = eig_pose_translated/*rot*/.translation().x() - xt_1.position.x;
+            double dy = eig_pose_translated/*rot*/.translation().y() - xt_1.position.y;
+            double dth = 0;/*eig_pose_rot.rotation().eulerAngles(2, 1, 0)[0]
+                       - quat_to_yaw(xt_1.orientation);*/
             if(dth > M_PI)   dth -= 2*M_PI;
             if(dth <= -M_PI) dth += 2*M_PI;
             l2_err += lamcont_ * (dx * dx + dy * dy + dth * dth);
-            ROS_INFO_STREAM(l2_err);
 
             if(l2_err < best_err) {
                 best_err = l2_err;
-                best_pose = eig_pose_rot;
+                best_pose = eig_pose_translated;//rot;
             }
-        }
+        //}
     }
     
     eig_posed = best_pose.cast<double>();
@@ -182,6 +191,8 @@ pcl::PointCloud<pcl::PointXYZ>::Ptr
     pcl::PointCloud<pcl::PointXYZ>::Ptr Z_pcl(
         new pcl::PointCloud<pcl::PointXYZ>);
     for(const auto& z : Z_raw) {
+        if(z.range >= z.max_range)
+            continue;
         geometry_msgs::PoseStamped ps;
         ps.pose.position.x = z.range;
         ps.pose.orientation.w = 1;
