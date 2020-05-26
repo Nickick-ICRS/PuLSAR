@@ -14,6 +14,10 @@
 #include "map_manager/map_manager.hpp"
 #include "sensor_models/range_cloud_sensor_model.hpp"
 
+#define ODOMETRY_ROBOT_MODEL "odometry"
+#define SCAN_MATCHING_ROBOT_MODEL "scan_matching"
+#define DEFAULT_ROBOT_MODEL ODOMETRY_ROBOT_MODEL
+
 /**
  * Abstract class to represent a robot model, including sensor and motion
  * models.

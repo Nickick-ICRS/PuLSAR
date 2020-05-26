@@ -20,6 +20,7 @@
  * be found in pose estimates of swarm members and these may be iteratively
  * updated to improve pose estimates.
  */
+template <class T>
 class AverageMCLSwarmPoseEstimator :public SwarmPoseEstimator {
 public:
     /**
@@ -59,8 +60,29 @@ public:
         std::map<std::string, std::string>& robot_odom_topics,
         std::map<std::string, std::string>& robot_base_links,
         std::map<std::string, float>& robot_radii, unsigned int M,
-        double min_trans_update);
-    ~AverageMCLSwarmPoseEstimator();
+        double min_trans_update, std::string robot_model)
+
+        :SwarmPoseEstimator(
+            cloud_gen, map_man, map_frame)
+    {
+        pose_pub_ =
+            nh_.advertise<geometry_msgs::PoseWithCovarianceStamped>(
+                "swarm_pose_estimate", 1);
+        for(const std::string& name : robot_names) {
+            robot_pose_estimators_[name].reset(
+                new MCLSingleRobotPoseEstimator<T>(
+                    name, cloud_gen, map_man, map_frame,
+                    initial_robot_poses[name], robot_odom_topics[name],
+                    robot_base_links[name], robot_radii[name], M,
+                    min_trans_update)); 
+            robot_pose_estimates_[name] = 
+                robot_pose_estimators_[name]->get_pose_estimate();
+            worker_threads_[name] = std::thread();
+        }
+
+        swarm_pose_estimate_.header.frame_id = map_frame;
+    };
+    ~AverageMCLSwarmPoseEstimator() {};
 
     /**
      * @brief Update robot pose estimates and swarm pose estimate.
@@ -69,9 +91,27 @@ public:
      * publish anything to TF. Also updates the pose estimate of
      * the entire swarm.
      */
-    void update_estimate();
+    void update_estimate() {
+        auto now = std::chrono::high_resolution_clock::now();
+        // Run all the update functions in threads
+        for(auto& pair : worker_threads_) {
+            pair.second = std::thread(
+                &MCLSingleRobotPoseEstimator<T>::update_estimate,
+                robot_pose_estimators_[pair.first]);
+        }
+        for(auto& pair : worker_threads_) {
+            pair.second.join();
+            robot_pose_estimates_[pair.first] = 
+                robot_pose_estimators_[pair.first]->get_pose_estimate();
+        }
+        update_estimate_covariance();
+        std::chrono::duration<double, std::milli> dt = 
+            std::chrono::high_resolution_clock::now() - now;
+        ROS_INFO_STREAM("Update took " << dt.count() << " milliseconds.");
+    };
+
 private:
-    std::map<std::string, std::shared_ptr<MCLSingleRobotPoseEstimator>>
+    std::map<std::string, std::shared_ptr<MCLSingleRobotPoseEstimator<T>>>
         robot_pose_estimators_;
 
     std::map<std::string, std::thread> worker_threads_;

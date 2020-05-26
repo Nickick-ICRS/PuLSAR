@@ -17,7 +17,7 @@ MCLSwarmPoseEstimator::MCLSwarmPoseEstimator(
     std::map<std::string, std::string>& robot_odom_topics,
     std::map<std::string, std::string>& robot_base_links,
     std::map<std::string, float>& robot_radii, unsigned int M,
-    double min_trans_update)
+    double min_trans_update, std::string robot_model)
 
     :SwarmPoseEstimator(cloud_gen, map_man, map_frame), map_man_(map_man),
     M_(M), radii_(robot_radii), num_close_robots_(sqrt(robot_names.size())),
@@ -25,9 +25,18 @@ MCLSwarmPoseEstimator::MCLSwarmPoseEstimator(
     dist_(0, 1)
 {
     for(const auto& name : robot_names) {
-        robot_models_[name].reset(new ScanMatchingRobotModel(
-            name, cloud_gen, map_man, map_frame, robot_odom_topics[name], 
-            robot_base_links[name], robot_radii[name], min_trans_update));
+        if(robot_model == SCAN_MATCHING_ROBOT_MODEL) {
+            robot_models_[name].reset(new ScanMatchingRobotModel(
+                name, cloud_gen, map_man, map_frame,
+                robot_odom_topics[name], robot_base_links[name],
+                robot_radii[name], min_trans_update));
+        }
+        else if(robot_model == ODOMETRY_ROBOT_MODEL) {
+            robot_models_[name].reset(new OdometryRobotModel(
+                name, cloud_gen, map_man, map_frame,
+                robot_odom_topics[name], robot_base_links[name],
+                robot_radii[name], min_trans_update));
+        }
         robot_pose_estimates_[name].header.frame_id = map_frame;
         robot_pose_estimates_[name].pose.pose = initial_robot_poses[name];
         robot_pose_estimates_[name].pose.covariance[0]  = 1e-6;

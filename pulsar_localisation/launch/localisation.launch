@@ -3,8 +3,10 @@
     <arg name="valgrind" default="false"/>
     <arg name="gdb" default="false"/>
     <arg name="localiser" default="mcl"/>
+    <arg name="robot_model" default="odometry"/>
 
     <arg name="prefix" value="$(eval 'valgrind --tool=callgrind --callgrind-out-file=/tmp/callgrind.out' if arg('valgrind') else 'gdb --args' if arg('gdb') else '')"/>
+
     <node name="pulsar_localisation" pkg="pulsar_localisation"
           type="localisation_node" output="screen"
           launch-prefix="$(arg prefix)">
@@ -69,13 +71,25 @@
         <param name="lamcont" value="100"/>
 
         <!-- Number of particles to be included in the MCL filter -->
-        <param name="num_particles" value="300"/>
+        <param name="num_particles" value="500"/>
 
         <!-- Minimum number of pose estimates within a cluster to be
              considered as a cluster -->
         <param name="dbscan_min_points" value="5"/>
         <!-- Clustering epsilon parameter (metres^2) -->
         <param name="dbscan_epsilon" value="0.0016"/>
+
+        <!-- Number of particles for the swarm in PSO (unused) -->
+        <param name="pso_swarm_particles" value="100"/>
+        <!-- Number of particles for the robots in PSO -->
+        <param name="pso_robot_particles" value="50"/>
+        <!-- PSO tuning parameters -->
+        <param name="pso_omega" value="0.4"/>
+        <param name="pso_phi_p" value="1.35"/>
+        <param name="pso_phi_g" value="1.35"/>
+        <param name="pso_phi_r" value="0.03"/>
+        <!-- Max number of PSO iterations per update cycle -->
+        <param name="pso_max_iterations" value="5"/>
 
         <!-- Minimum translational motion for a robot to update its filter
              -->
@@ -85,5 +99,8 @@
 
         <!-- Which localisation algorithm to use -->
         <param name="robot_localiser" value="$(arg localiser)"/>
+
+        <!-- Which robot model to use -->
+        <param name="robot_model" value="$(arg robot_model)"/>
     </node>
 </launch>

@@ -119,4 +119,5 @@ void CloudGenerator::range_cb(const sensor_msgs::RangeConstPtr& msg) {
     }
     std::lock_guard<std::recursive_mutex> lock(robot_cloud_muts_[prefix]);
     robot_raw_data_[prefix].push_back(*msg);
+    clean_cloud(prefix);
 }

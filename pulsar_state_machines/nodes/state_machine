@@ -23,7 +23,10 @@ def main():
     elif machine_type == GROUP_TARGET_MACHINE:
         machine = GroupTargetStateMachine(ns)
     else:
-        rospy.logerr("Got unrecognised state machine: " + str(machine_type))
+        rospy.logerr(
+            "Got unrecognised state machine: " + str(machine_type) 
+            + ". Available options are : " + DEFAULT_MACHINE + ","
+            + GROUP_TARGET_MACHINE)
         return
     rospy.sleep(delay)
     machine.update_loop(freq, debug=True)

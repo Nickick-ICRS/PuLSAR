@@ -2,12 +2,14 @@
 #include <thread>
 
 #include <ros/ros.h>
+#include <std_msgs/Float64.h>
 
 #include "cloud_generator/cloud_generator.hpp"
 #include "pose_estimators/swarm_pose_estimator.hpp"
 #include "pose_estimators/swarm_pose_estimator.hpp"
 #include "pose_estimators/mcl_swarm_pose_estimator.hpp"
 #include "pose_estimators/average_mcl_swarm_pose_estimator.hpp"
+#include "pose_estimators/pso_pose_estimator.hpp"
 #include "map_manager/map_manager.hpp"
 #include "sensor_models/range_cloud_sensor_model.hpp"
 #include "robot_models/scan_matching_robot_model.hpp"
@@ -15,6 +17,7 @@
 // Definitions of available swarm pose estimators
 #define MCL                 "mcl"
 #define AVERAGE_SINGLE_MCL  "average_single_mcl"
+#define PSO                 "pso"
 #define DEFAULT_LOCALISER   AVERAGE_SINGLE_MCL
 
 /**
@@ -93,6 +96,8 @@ private:
     
     // Which localiser should we use?
     std::string localiser_;
+    // Which robot model should we use?
+    std::string robot_model_;
 
     /* ******************** *
      * Algorithm parameters *
@@ -103,6 +108,10 @@ private:
     // How many particles are kept in the filter(s) 
     // see MCLSingleRobotPoseEstimator
     int particle_filter_size_;
+
+    // Only for PSOPoseEstimator
+    int pso_swarm_particles_;
+    int pso_robot_particles_;
 
     // Minimum translation required to run a filter update
     double min_trans_update_;
@@ -156,22 +165,52 @@ LocalisationNode::LocalisationNode() :running_(true) {
     map_man_.reset(new MapManager(map_topic_));
 
     if(localiser_ == AVERAGE_SINGLE_MCL) {
-        pose_est_.reset(new AverageMCLSwarmPoseEstimator(
-            cloud_gen_, map_man_, "map", robot_names,
-            initial_pose_estimates_, robot_odom_map, robot_base_link_map, 
-            robot_radii_map, particle_filter_size_, min_trans_update_));
+        if(robot_model_ == ODOMETRY_ROBOT_MODEL) {
+            pose_est_.reset(
+                new AverageMCLSwarmPoseEstimator<OdometryRobotModel>(
+                    cloud_gen_, map_man_, "map", robot_names,
+                    initial_pose_estimates_, robot_odom_map,
+                    robot_base_link_map, robot_radii_map,
+                    particle_filter_size_, min_trans_update_,
+                    robot_model_));
+        }
+        else if(robot_model_ == SCAN_MATCHING_ROBOT_MODEL) {
+            pose_est_.reset(
+                new AverageMCLSwarmPoseEstimator<ScanMatchingRobotModel>(
+                    cloud_gen_, map_man_, "map", robot_names,
+                    initial_pose_estimates_, robot_odom_map,
+                    robot_base_link_map, robot_radii_map,
+                    particle_filter_size_, min_trans_update_,
+                    robot_model_));
+        }
+        else {
+            throw("Unknown robot_model: " + robot_model_ + ". Options are: "
+                + ODOMETRY_ROBOT_MODEL + ", " + SCAN_MATCHING_ROBOT_MODEL);
+        }
     }
     else if(localiser_ == MCL) {
         pose_est_.reset(new MCLSwarmPoseEstimator(
             cloud_gen_, map_man_, "map", robot_names,
             initial_pose_estimates_, robot_odom_map, robot_base_link_map, 
-            robot_radii_map, particle_filter_size_, min_trans_update_));
+            robot_radii_map, particle_filter_size_, min_trans_update_,
+            robot_model_));
+    }
+    else if(localiser_ == PSO) {
+        pose_est_.reset(new PSOPoseEstimator(
+            cloud_gen_, map_man_, "map", robot_names,
+            initial_pose_estimates_, robot_odom_map, robot_base_link_map,
+            robot_radii_map, pso_swarm_particles_, pso_robot_particles_,
+            robot_model_, true));
     }
     else {
+        ROS_ERROR_STREAM(
+            "'" + localiser_ + "' is not a recognised localisation"
+            + " algorithm. Available algorithms are: '" + MCL + "', '"
+            + AVERAGE_SINGLE_MCL + "', '" + PSO + "'.");
         throw std::invalid_argument(
             "'" + localiser_ + "' is not a recognised localisation"
             + " algorithm. Available algorithms are: '" + MCL + "', '"
-            + AVERAGE_SINGLE_MCL + "'.");
+            + AVERAGE_SINGLE_MCL + "', '" + PSO + "'.");
     }
 
     main_thread_ = std::thread(&LocalisationNode::loop, this);
@@ -189,16 +228,27 @@ void LocalisationNode::loop() {
 
     ros::NodeHandle nh("~");
     ros::Publisher pub = nh.advertise<geometry_msgs::PoseArray>("test", 1);
+    ros::Publisher timing_pub = nh.advertise<std_msgs::Float64>(
+        "time_taken_per_update", 1);
     geometry_msgs::Point p;
     geometry_msgs::PoseArray c;
     c.header.frame_id = "map";
     while(running_) {
         sleeper.sleep();
         //pose_est_->robot_pose_estimators_["pulsar_0"]->update_estimate();
+
+        auto now = std::chrono::high_resolution_clock::now();
         pose_est_->update_estimate();
+        std::chrono::duration<double, std::milli> dt =
+            std::chrono::high_resolution_clock::now() - now;
+        std_msgs::Float64 dtmsg;
+        dtmsg.data = dt.count();
+        timing_pub.publish(dtmsg);
+
         cloud_gen_->publish_cloud("pulsar_0");
         pose_est_->publish_pose_estimate();
         //auto& pts = pose_est_->robot_pose_estimators_["pulsar_0"]->get_pose_estimates();
+        /*
         auto& pts = std::static_pointer_cast<MCLSwarmPoseEstimator>(pose_est_)->pose_cloud_;
         c.poses.clear();
         for(const auto& p : pts) {
@@ -206,6 +256,7 @@ void LocalisationNode::loop() {
         }
         c.header.stamp = ros::Time::now();
         pub.publish(c);
+        */
         map_man_->publish_maps();
     }
 }
@@ -416,19 +467,19 @@ void LocalisationNode::get_ros_parameters() {
     }
 
     if(!ros::param::param<double>(
-        "~aslow", MCLSingleRobotPoseEstimator::aslow_, 0.2))
+        "~aslow", MCLSingleRobotPoseEstimatorConstants::aslow_, 0.2))
     {
         ROS_WARN_STREAM(
             "Failed to get param 'aslow'. Defaulting to '"
-            << MCLSingleRobotPoseEstimator::aslow_ << "'.");
+            << MCLSingleRobotPoseEstimatorConstants::aslow_ << "'.");
     }
 
     if(!ros::param::param<double>(
-        "~afast", MCLSingleRobotPoseEstimator::afast_, 0.2))
+        "~afast", MCLSingleRobotPoseEstimatorConstants::afast_, 0.2))
     {
         ROS_WARN_STREAM(
             "Failed to get param 'afast'. Defaulting to '"
-            << MCLSingleRobotPoseEstimator::afast_ << "'.");
+            << MCLSingleRobotPoseEstimatorConstants::afast_ << "'.");
     }
 
     if(!ros::param::param<double>(
@@ -497,21 +548,22 @@ void LocalisationNode::get_ros_parameters() {
 
     if(!ros::param::param<int>(
         "~dbscan_min_points", 
-        MCLSingleRobotPoseEstimator::dbscan_min_points_,
-        5))
+        MCLSingleRobotPoseEstimatorConstants::dbscan_min_points_, 5))
     {
         ROS_WARN_STREAM(
             "Failed to get param 'dbscan_min_points'. Defaulting to '"
-            << MCLSingleRobotPoseEstimator::dbscan_min_points_ << "'.");
+            << MCLSingleRobotPoseEstimatorConstants::dbscan_min_points_
+            << "'.");
     }
 
     if(!ros::param::param<double>(
-        "~dbscan_epsilon", MCLSingleRobotPoseEstimator::dbscan_epsilon_,
-        0.05*0.05))
+        "~dbscan_epsilon",
+        MCLSingleRobotPoseEstimatorConstants::dbscan_epsilon_, 0.05*0.05))
     {
         ROS_WARN_STREAM(
             "Failed to get param 'dbscan_epsilon'. Defaulting to '"
-            << MCLSingleRobotPoseEstimator::dbscan_epsilon_ << "'.");
+            << MCLSingleRobotPoseEstimatorConstants::dbscan_epsilon_
+            << "'.");
     }
 
     if(!ros::param::param<double>(
@@ -544,5 +596,69 @@ void LocalisationNode::get_ros_parameters() {
         ROS_WARN_STREAM(
             "Failed to get param 'lamcont'. Defaulting to '"
             << ScanMatchingRobotModel::lamcont_ << "'.");
+    }
+
+    if(!ros::param::param<std::string>(
+        "~robot_model", robot_model_, DEFAULT_ROBOT_MODEL))
+    {
+        ROS_WARN_STREAM(
+            "Failed to get param 'robot_model'. Defaulting to '"
+            << robot_model_);
+    }
+
+    if(!ros::param::param<int>(
+        "~pso_max_iterations", PSOPoseEstimator::max_its_, 10))
+    {
+        ROS_WARN_STREAM(
+            "Failed to get param 'pso_max_iterations'. Defaulting to '"
+            << PSOPoseEstimator::max_its_);
+    }
+
+    if(!ros::param::param<double>(
+        "~pso_omega", PSOPoseEstimator::omega_, 0.9))
+    {
+        ROS_WARN_STREAM(
+            "Failed to get param 'pso_omega'. Defaulting to '"
+            << PSOPoseEstimator::omega_);
+    }
+
+    if(!ros::param::param<double>(
+        "~pso_phi_p", PSOPoseEstimator::phi_p_, 0.5))
+    {
+        ROS_WARN_STREAM(
+            "Failed to get param 'pso_phi_p'. Defaulting to '"
+            << PSOPoseEstimator::phi_p_);
+    }
+
+    if(!ros::param::param<double>(
+        "~pso_phi_g", PSOPoseEstimator::phi_g_, 0.5))
+    {
+        ROS_WARN_STREAM(
+            "Failed to get param 'pso_phi_g'. Defaulting to '"
+            << PSOPoseEstimator::phi_g_);
+    }
+
+    if(!ros::param::param<double>(
+        "~pso_phi_r", PSOPoseEstimator::phi_r_, 0.5))
+    {
+        ROS_WARN_STREAM(
+            "Failed to get param 'pso_phi_r'. Defaulting to '"
+            << PSOPoseEstimator::phi_r_);
+    }
+
+    if(!ros::param::param<int>(
+        "~pso_swarm_particles", pso_swarm_particles_, 10))
+    {
+        ROS_WARN_STREAM(
+            "Failed to get param 'pso_swarm_particles'. Defaulting to '"
+            << pso_swarm_particles_);
+    }
+
+    if(!ros::param::param<int>(
+        "~pso_robot_particles", pso_robot_particles_, 10))
+    {
+        ROS_WARN_STREAM(
+            "Failed to get param 'pso_robot_particles'. Defaulting to '"
+            << pso_robot_particles_);
     }
 }

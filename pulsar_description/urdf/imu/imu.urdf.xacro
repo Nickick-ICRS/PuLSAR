@@ -17,6 +17,7 @@
                 <xyzOffset>0 0 0</xyzOffset>
                 <rpyOffset>0 0 0</rpyOffset>
                 <frameName>$(arg robot_ns)/base_link</frameName>
+                <initialOrientationAsReference>false</initialOrientationAsReference>
             </plugin>
         </sensor>
     </gazebo>

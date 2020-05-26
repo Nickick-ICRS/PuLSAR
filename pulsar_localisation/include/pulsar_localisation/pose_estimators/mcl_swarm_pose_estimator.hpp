@@ -15,7 +15,7 @@
 #include "cloud_generator/cloud_generator.hpp"
 
 /**
- * @ brief Estimates the pose of the whole swarm.
+ * @brief Estimates the pose of the whole swarm.
  *
  * Class to estimate the pose of an entire swarm of robots. Runs a modified
  * MCL filter, where pose estimates are tested among all robots in order
@@ -50,6 +50,8 @@ public:
      *
      * @param min_trans_update Minimum robot movement to consider when
      *                         calculating the odometry motion model.
+     *
+     * @param robot_model Which robot model to use.
      */
     MCLSwarmPoseEstimator(
         const std::shared_ptr<CloudGenerator>& cloud_gen,
@@ -59,7 +61,7 @@ public:
         std::map<std::string, std::string>& robot_odom_topics,
         std::map<std::string, std::string>& robot_base_links,
         std::map<std::string, float>& robot_radii, unsigned int M,
-        double min_trans_update);
+        double min_trans_update, std::string robot_model);
     ~MCLSwarmPoseEstimator();
 
     /**

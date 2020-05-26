@@ -33,9 +33,9 @@ geometry_msgs::PoseWithCovariance calculate_pose_with_covariance(
             "Can't calculate the average of no points!");
 
     double avg_yaw = 0;
-    geometry_msgs::PoseWithCovariance ret;
+    geometry_msgs::Pose p;
 
-    geometry_msgs::Point& avg_pt = ret.pose.position;
+    geometry_msgs::Point& avg_pt = p.position;
 
     double n = poses.size();
 
@@ -55,17 +55,30 @@ geometry_msgs::PoseWithCovariance calculate_pose_with_covariance(
     while(avg_yaw > M_PI) avg_yaw -= 2*M_PI;
     while(avg_yaw <= -M_PI) avg_yaw += 2*M_PI;
 
-    ret.pose.orientation = yaw_to_quat(avg_yaw);
+    p.orientation = yaw_to_quat(avg_yaw);
+
+    return calculate_pose_with_covariance(p, poses);
+}
+
+geometry_msgs::PoseWithCovariance calculate_pose_with_covariance(
+    const geometry_msgs::Pose& pose,
+    const std::vector<geometry_msgs::Pose>& poses)
+{
+    geometry_msgs::PoseWithCovariance ret;
+    ret.pose = pose;
+
+    auto yaw = quat_to_yaw(pose.orientation);
+    auto& pt = pose.position;
 
     auto& cov_mat = ret.covariance;
 
-    n -= 1;
+    double n = poses.size() - 1;
     if(n <= 1e-3) n = 1e-3;
 
     for(auto& pose : poses) {
-        double dx = pose.position.x - avg_pt.x;
-        double dy = pose.position.y - avg_pt.y;
-        double dz = quat_to_yaw(pose.orientation) - avg_yaw;
+        double dx = pose.position.x - pt.x;
+        double dy = pose.position.y - pt.y;
+        double dz = quat_to_yaw(pose.orientation) - yaw;
         if(dz > M_PI) dz -= 2*M_PI;
         if(dz <= -M_PI) dz += 2*M_PI;
         cov_mat[0]  += dx * dx / n;
@@ -80,4 +93,12 @@ geometry_msgs::PoseWithCovariance calculate_pose_with_covariance(
     cov_mat[31] = cov_mat[11];
 
     return ret;
+}
+
+double clamp_angle(double ang) {
+    if(!std::isfinite(ang))
+        return ang;
+    while(ang > M_PI) ang -= 2*M_PI;
+    while(ang <= -M_PI) ang += 2*M_PI;
+    return ang;
 }

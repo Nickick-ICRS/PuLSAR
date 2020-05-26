@@ -60,4 +60,26 @@ double sample_normal_distribution(double b2);
 geometry_msgs::PoseWithCovariance calculate_pose_with_covariance(
     const std::vector<geometry_msgs::Pose>& poses);
 
+/**
+ * Calculates the covariance of a given pose wrt a set of poses.
+ * 
+ * @param pose The pose to find the covariance of.
+ *
+ * @param poses The set from which to calculate the covariance.
+ *
+ * @return The pose given along with accompanying covariance.
+ */
+geometry_msgs::PoseWithCovariance calculate_pose_with_covariance(
+    const geometry_msgs::Pose& pose,
+    const std::vector<geometry_msgs::Pose>& poses);
+
+/**
+ * Clamps an angle to +- PI radians.
+ *
+ * @param ang The angle to clamp (in radians).
+ *
+ * @return The clamped angle
+ */
+double clamp_angle(double ang);
+
 #endif // __USEFUL_FUNCTIONS_HPP__

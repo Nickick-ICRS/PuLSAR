@@ -308,6 +308,13 @@ double MapManager::cone_cast_with_bots(
     const geometry_msgs::Point& p, double ang, double spread, 
     std::string robot_name)
 {
+    try {
+        auto& map = maps_with_robots_.at(robot_name);
+    }
+    catch(std::out_of_range) {
+        std::unique_lock<std::shared_mutex> lock(map_mutex_);
+        maps_with_robots_[robot_name] = map_data_;
+    }
     return cone_cast(p, ang, spread, maps_with_robots_[robot_name]);
 }
 
