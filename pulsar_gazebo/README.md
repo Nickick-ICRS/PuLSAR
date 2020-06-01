@@ -20,7 +20,7 @@ This launch file spawns one pulsar robot with accompanying nodes (not localisati
 - state_machine_type - Which state machine should be spawned (see pulsar_state_machines). String. Default is "default". Options are:
     - "default" - Random movement state machine.
     - "group_target" - State machine which attempts to group with other robots and move towards a target point.
-- map_file - Which map file to use. String. Default is "<location of pulsar_gazebo>/maps/map.yaml".
+- map_file - Which map file to use. String. Default is "\<location of pulsar_gazebo>/maps/map.yaml".
 
 ### Multiple Robots
 
@@ -31,7 +31,7 @@ This launch file spawns a swarm of pulsar robots in the Gazebo simulator, and st
 - state_machine_type - Which state machine should be spawned (see pulsar_state_machines). String. Default is "default". Options are:
     - "default" - Random movement state machine.
     - "group_target" - State machine which attempts to group with other robots and move towards a target point.
-- map_file - Which map file to use. String. Default is "<location of pulsar_gazebo>/maps/map.yaml".
+- map_file - Which map file to use. String. Default is "\<location of pulsar_gazebo>/maps/map.yaml".
 
 ## Maps
 
@@ -62,11 +62,11 @@ This folder contains the gazebo robot plugin. The plugin is used in the robot UR
 
 The plugin creates the following publishers:
 
-- "<namespace>/<odomTopic>" - Odometry measurements (nav_msgs/Odometry).
+- "\<namespace>/\<odomTopic>" - Odometry measurements (nav_msgs/Odometry).
 
 The plugin creates the following subscribers:
-- "<namespace>/<cmdVelTopic>" - Velocity commands (geometry_msgs/Twist).
-- "<namespace>/<imuTopic>" - Imu data (sensor_msgs/Imu).
+- "\<namespace>/\<cmdVelTopic>" - Velocity commands (geometry_msgs/Twist).
+- "\<namespace>/\<imuTopic>" - Imu data (sensor_msgs/Imu).
 
 ## Scripts
 
