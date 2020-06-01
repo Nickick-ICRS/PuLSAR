@@ -108,24 +108,7 @@ private:
      */
     bool update_robot_particles(std::string robot_name);
 
-    /**
-     * Updates the pose estimate of the swarm.
-     *
-     * @return Whether the pose estimate has improved.
-     */
-    bool update_swarm_particles();
-
-    /**
-     * Weighs a swarm pose estimate.
-     *
-     * @param p The pose estimate.
-     *
-     * @return The weight. Larger is better.
-     */
-    double weigh_swarm_pose(const geometry_msgs::Pose& p);
-
     void update_robot_pose_estimates();
-    void update_estimate_covariance() override;
 
     const std::shared_ptr<MapManager>& map_man_;
     

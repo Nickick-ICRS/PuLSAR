@@ -79,8 +79,6 @@
         <!-- Clustering epsilon parameter (metres^2) -->
         <param name="dbscan_epsilon" value="0.0016"/>
 
-        <!-- Number of particles for the swarm in PSO (unused) -->
-        <param name="pso_swarm_particles" value="100"/>
         <!-- Number of particles for the robots in PSO -->
         <param name="pso_robot_particles" value="50"/>
         <!-- PSO tuning parameters -->

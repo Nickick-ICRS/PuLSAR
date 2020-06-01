@@ -12,6 +12,8 @@ double PSOPoseEstimator::phi_r_;
 
 ros::Publisher test_pub;
 
+const bool RELATIVE_POSES = true;
+
 PSOPoseEstimator::PSOPoseEstimator(
     const std::shared_ptr<CloudGenerator>& cloud_gen,
     const std::shared_ptr<MapManager>& map_man, std::string map_frame,
@@ -26,7 +28,22 @@ PSOPoseEstimator::PSOPoseEstimator(
     :SwarmPoseEstimator(cloud_gen, map_man, map_frame), gen_(rd_()),
     dist_(0, 1), radii_(robot_radii), map_man_(map_man)
 {
+
     test_pub = nh_.advertise<sensor_msgs::PointCloud>("test2", 1);
+    if(use_initial_poses && RELATIVE_POSES) {
+        int n = 0;
+        for(auto& pair : initial_robot_poses) {
+            swarm_pose_estimate_.pose.pose.position.x +=
+                pair.second.position.x;
+            swarm_pose_estimate_.pose.pose.position.y +=
+                pair.second.position.y;
+            n++;
+        }
+        if(n != 0) {
+            swarm_pose_estimate_.pose.pose.position.x /= n;
+            swarm_pose_estimate_.pose.pose.position.y /= n;
+        }
+    }
     // Initialise robot particle clouds
     for(const auto& name : robot_names) {
         if(robot_model == SCAN_MATCHING_ROBOT_MODEL) {
@@ -55,6 +72,12 @@ PSOPoseEstimator::PSOPoseEstimator(
                 geometry_msgs::Pose p = initial_robot_poses[name];
                 p.position.x += dist_(gen_) * 0.1 - 0.05;
                 p.position.y += dist_(gen_) * 0.1 - 0.05;
+                if(RELATIVE_POSES) {
+                    p.position.x -=
+                        swarm_pose_estimate_.pose.pose.position.x;
+                    p.position.y -=
+                        swarm_pose_estimate_.pose.pose.position.y;
+                }
                 p.orientation = yaw_to_quat(
                     quat_to_yaw(p.orientation) + dist_(gen_) * 0.5 - 0.25);
                 robot_particle_clouds_[name].particles.push_back(p);
@@ -75,38 +98,6 @@ PSOPoseEstimator::PSOPoseEstimator(
 
     // For random pose generation
     auto& model = robot_models_[robot_names[0]];
-
-    // Initialise swarm particle cloud
-    if(swarm_particles < 1) swarm_particles = 1;
-    geometry_msgs::Pose avg_pose;
-    if(use_initial_poses) {
-        for(auto& pair : robot_particle_clouds_) {
-            auto& cloud = pair.second;
-            avg_pose.position.x += cloud.best_pose.position.x;
-            avg_pose.position.y += cloud.best_pose.position.y;
-        }
-        avg_pose.position.x /= robot_names.size();
-        avg_pose.position.y /= robot_names.size();
-    }
-    for(int i = 0; i < swarm_particles; i++) {
-        if(use_initial_poses) {
-            geometry_msgs::Pose p = avg_pose;
-            p.position.x += dist_(gen_) * 0.1 - 0.05;
-            p.position.y += dist_(gen_) * 0.1 - 0.05;
-            p.orientation = yaw_to_quat(
-                quat_to_yaw(p.orientation) + dist_(gen_) * 0.5 - 0.25);
-            swarm_particle_cloud_.particles.push_back(p);
-        }
-        else {
-            swarm_particle_cloud_.particles.push_back(
-                model->gen_random_valid_pose());
-        }
-        swarm_particle_cloud_.particle_bests.push_back(
-            swarm_particle_cloud_.particles.back());
-        swarm_particle_cloud_.velocities.emplace_back();
-    }
-    swarm_particle_cloud_.best_pose =
-        swarm_particle_cloud_.particle_bests[0];
 }
 
 PSOPoseEstimator::~PSOPoseEstimator() {
@@ -115,8 +106,11 @@ PSOPoseEstimator::~PSOPoseEstimator() {
 
 void PSOPoseEstimator::update_estimate() {
     auto now = std::chrono::high_resolution_clock::now();
-    bool update_complete = false;
-    int its = 0;
+
+    // In this scenario we update the swarm pose estimate FIRST
+    if(RELATIVE_POSES)
+        update_estimate_covariance();
+
     // reset robot cloud bests
     for(auto& pair : robot_particle_clouds_) {
         auto& cloud = pair.second;
@@ -132,16 +126,17 @@ void PSOPoseEstimator::update_estimate() {
             }
         }
     }
+
+    bool update_complete = false;
+    int its = 0;
     while(!update_complete) {
         update_complete = false;
         for(auto& pair : robot_models_) {
             // If robot estimates improve then we continue looping
+            // Unused now
             if(update_robot_particles(pair.first))
                 update_complete = false;
         }
-        // If the swarm estimate improves then we continue looping
-        if(update_swarm_particles())
-            update_complete = false;
         if(++its >= max_its_ && max_its_ > 0)
             update_complete = true;
 
@@ -152,8 +147,12 @@ void PSOPoseEstimator::update_estimate() {
         for(const auto& pair : robot_particle_clouds_) {
             for(const auto& p : pair.second.particles) {
                 geometry_msgs::Point32 p32;
-                p32.x = p.position.x;// + swarm.x;
-                p32.y = p.position.y;// + swarm.y;
+                p32.x = p.position.x;
+                p32.y = p.position.y;
+                if(RELATIVE_POSES) {
+                    p32.x += swarm.x;
+                    p32.y += swarm.y;
+                }
                 pc.points.push_back(p32);
             }
         }
@@ -164,11 +163,13 @@ void PSOPoseEstimator::update_estimate() {
 
     update_robot_pose_estimates();
 
-    update_estimate_covariance();
+    if(!RELATIVE_POSES)
+        update_estimate_covariance();
 
     std::chrono::duration<double, std::milli> dt =
         std::chrono::high_resolution_clock::now() - now;
     ROS_INFO_STREAM("Update took " << dt.count() << " milliseconds.");
+
 }
 
 void PSOPoseEstimator::calc_new_particle_position(
@@ -201,8 +202,10 @@ void PSOPoseEstimator::calc_new_particle_position(
         v.y = v.y > 0 ? 0.5 : -0.5;
 
     auto swarm_pos = swarm_pose_estimate_.pose.pose.position;
-    swarm_pos.x = 0;
-    swarm_pos.y = 0;
+    if(!RELATIVE_POSES) {
+        swarm_pos.x = 0;
+        swarm_pos.y = 0;
+    }
 
     // If the particle has left the map then flip the relevant velocity
     if(x.position.x + v.x + swarm_pos.x < -1)
@@ -220,12 +223,18 @@ void PSOPoseEstimator::calc_new_particle_position(
     x.position.y += v.y;
     x.orientation = yaw_to_quat(xz + v.z);
 
-    if(!map_man_->is_pose_valid(x)) {
+    auto xprime = x;
+    xprime.position.x += swarm_pos.x;
+    xprime.position.y += swarm_pos.y;
+
+    if(!map_man_->is_pose_valid(xprime)) {
         ROS_INFO_STREAM("Pose invalid: " << p.position);
         for(const auto& pair : robot_models_) {
             x = pair.second->gen_random_valid_pose();
             break;
         }
+        x.position.x -= swarm_pos.x;
+        x.position.y -= swarm_pos.y;
     }
 }
 
@@ -236,8 +245,10 @@ bool PSOPoseEstimator::update_robot_particles(std::string robot_name) {
 
     // Note that swarm orientation doesn't really mean anything
     auto swarm_pos = swarm_pose_estimate_.pose.pose.position;
-    swarm_pos.x = 0;
-    swarm_pos.y = 0;
+    if(!RELATIVE_POSES) {
+        swarm_pos.x = 0;
+        swarm_pos.y = 0;
+    }
     auto& cloud = robot_particle_clouds_[robot_name];
     
     // Update each particle modelling the robot
@@ -266,11 +277,12 @@ bool PSOPoseEstimator::update_robot_particles(std::string robot_name) {
         // Update best particles
         if(model->weigh_pose(xprime) > model->weigh_pose(pprime)) {
             p = x;
-            if(model->weigh_pose(pprime) < model->weigh_pose(fg)) {
-                fg = p;
+            if(model->weigh_pose(xprime) < model->weigh_pose(fg)) {
+                fg = x;
+                improved_estimate = true;
             }
-            if(model->weigh_pose(pprime) < model->weigh_pose(gprime)) {
-                g = p;
+            if(model->weigh_pose(xprime) < model->weigh_pose(gprime)) {
+                g = x;
                 improved_estimate = true;
             }
         }
@@ -279,56 +291,8 @@ bool PSOPoseEstimator::update_robot_particles(std::string robot_name) {
     return improved_estimate;
 }
 
-bool PSOPoseEstimator::update_swarm_particles() {
-    return false;
-    // Assume we haven't imrpoved the estimate
-    bool improved_estimate = false;
-
-    for(int i = 0; i < swarm_particle_cloud_.particles.size(); i++) {
-        auto& x = swarm_particle_cloud_.particles[i];
-        auto& v = swarm_particle_cloud_.velocities[i];
-        auto& p = swarm_particle_cloud_.particle_bests[i];
-        auto& g = swarm_particle_cloud_.best_pose;
-
-        // Update the particle pose
-        calc_new_particle_position(x, v, p, g);
-
-        // Update best estimates
-        if(weigh_swarm_pose(x) > weigh_swarm_pose(p)) {
-            p = x;
-            if(weigh_swarm_pose(p) > weigh_swarm_pose(g)) {
-                g = p;
-            }
-            improved_estimate = true;
-        }
-    }
-
-    return improved_estimate;
-}
-
-double PSOPoseEstimator::weigh_swarm_pose(const geometry_msgs::Pose& p) {
-    // Our weight is just the sum of all robot particle weights given the
-    // pose estimate
-    double weight = 0;
-    for(auto& pair : robot_particle_clouds_) {
-        auto& pose = pair.second.best_pose;
-        auto& model = robot_models_[pair.first];
-
-        // Calculate the robot pose in the map frame
-        // Note that we don't consider the swarm orientation because it
-        // doesn't really mean anything
-        auto map_pose = pose;
-        map_pose.position.x += p.position.x;
-        map_pose.position.y += p.position.y;
-
-        // Update weight
-        weight += model->weigh_pose(map_pose);
-    }
-    return weight;
-}
-
 void PSOPoseEstimator::update_robot_pose_estimates() {
-    auto& map_pose = swarm_pose_estimate_.pose.pose;// swarm_particle_cloud_.best_pose;
+    auto& map_pose = swarm_pose_estimate_.pose.pose;
 
     for(const auto& pair : robot_particle_clouds_) {
         const auto& name = pair.first;
@@ -338,9 +302,9 @@ void PSOPoseEstimator::update_robot_pose_estimates() {
         robot_pose_estimates_[name].pose = calculate_pose_with_covariance(
             cloud.best_pose, cloud.particle_bests);
         robot_pose_estimates_[name].pose.pose.position.x +=
-            0;//map_pose.position.x;
+            RELATIVE_POSES ? map_pose.position.x : 0;
         robot_pose_estimates_[name].pose.pose.position.y +=
-            0;//map_pose.position.y;
+            RELATIVE_POSES ? map_pose.position.y : 0;
 
         auto tf = robot_models_[name]->calculate_transform(
             robot_pose_estimates_[name].pose.pose);
@@ -348,27 +312,4 @@ void PSOPoseEstimator::update_robot_pose_estimates() {
         map_man_->set_robot_pose(
             name, robot_pose_estimates_[name].pose.pose, radii_[name]);
     }
-}
-
-void PSOPoseEstimator::update_estimate_covariance() {
-    SwarmPoseEstimator::update_estimate_covariance();
-    return;
-    swarm_pose_estimate_.header.stamp = ros::Time::now();
-
-    geometry_msgs::PoseWithCovariance new_pose;
-    new_pose.pose.position = swarm_particle_cloud_.best_pose.position;
-    new_pose.pose.orientation.w = 1;
-
-    auto& cov_mat = new_pose.covariance;
-    auto& pos = new_pose.pose.position;
-    double n = swarm_particle_cloud_.particle_bests.size();
-
-    for(const auto& p : swarm_particle_cloud_.particle_bests) {
-        cov_mat[0] += pow(p.position.x - pos.x, 2) / n;
-        cov_mat[1] += (p.position.x - pos.x) * (p.position.y - pos.y) / n;
-        cov_mat[7] += pow(p.position.y - pos.y, 2) / n;
-    }
-    cov_mat[6] = cov_mat[1];
-
-    swarm_pose_estimate_.pose = new_pose;
 }

@@ -52,7 +52,7 @@ double ScanMatchingRobotModel::weigh_pose(const geometry_msgs::Pose& p) {
         tree->nearestKSearch(Z_pcl->at(i), 1, index, dist);
         l2_err += pow(dist[0], 2);
     } 
-    return 1/(0.1+l2_err);
+    return 1/l2_err;
 }
 
 /**
