@@ -70,7 +70,7 @@ The plugin creates the following subscribers:
 
 ## Scripts
 
-This package has two scripts. The first `spawn_pulsar_robot.py` spawns a pulsar robot in gazeboby procedurally calling the one robot launch file. It is not intended to be called by humans and is called bythe multiple robot launch file.
+This package has two scripts (run via `$ rosrun pulsar_gazebo \<script name>`). The first `spawn_pulsar_robot.py` spawns a pulsar robot in gazeboby procedurally calling the one robot launch file. It is not intended to be called by humans and is called bythe multiple robot launch file.
 
 The second script `pid_graph.py` is helpful for tuning PI values of the motors. With a single running robot (called PuLSAR) in gazebo, it plots the current speed at which the wheels are turning in radians.
 
