@@ -12,7 +12,7 @@ double PSOPoseEstimator::phi_r_;
 
 ros::Publisher test_pub;
 
-const bool RELATIVE_POSES = true;
+const bool RELATIVE_POSES = false;
 
 PSOPoseEstimator::PSOPoseEstimator(
     const std::shared_ptr<CloudGenerator>& cloud_gen,
@@ -22,7 +22,7 @@ PSOPoseEstimator::PSOPoseEstimator(
     std::map<std::string, std::string>& robot_odom_topics,
     std::map<std::string, std::string>& robot_base_links,
     std::map<std::string, float>& robot_radii,
-    unsigned int swarm_particles, unsigned int robot_particles,
+    unsigned int robot_particles,
     std::string robot_model, bool use_initial_poses)
 
     :SwarmPoseEstimator(cloud_gen, map_man, map_frame), gen_(rd_()),

@@ -110,7 +110,6 @@ private:
     int particle_filter_size_;
 
     // Only for PSOPoseEstimator
-    int pso_swarm_particles_;
     int pso_robot_particles_;
 
     // Minimum translation required to run a filter update
@@ -199,7 +198,7 @@ LocalisationNode::LocalisationNode() :running_(true) {
         pose_est_.reset(new PSOPoseEstimator(
             cloud_gen_, map_man_, "map", robot_names,
             initial_pose_estimates_, robot_odom_map, robot_base_link_map,
-            robot_radii_map, pso_swarm_particles_, pso_robot_particles_,
+            robot_radii_map, pso_robot_particles_,
             robot_model_, true));
     }
     else {
@@ -644,14 +643,6 @@ void LocalisationNode::get_ros_parameters() {
         ROS_WARN_STREAM(
             "Failed to get param 'pso_phi_r'. Defaulting to '"
             << PSOPoseEstimator::phi_r_);
-    }
-
-    if(!ros::param::param<int>(
-        "~pso_swarm_particles", pso_swarm_particles_, 10))
-    {
-        ROS_WARN_STREAM(
-            "Failed to get param 'pso_swarm_particles'. Defaulting to '"
-            << pso_swarm_particles_);
     }
 
     if(!ros::param::param<int>(

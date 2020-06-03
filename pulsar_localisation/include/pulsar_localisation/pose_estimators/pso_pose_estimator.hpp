@@ -70,7 +70,7 @@ public:
         std::map<std::string, std::string>& robot_odom_topics,
         std::map<std::string, std::string>& robot_base_links,
         std::map<std::string, float>& robot_radii,
-        unsigned int swarm_particles, unsigned int robot_particles,
+        unsigned int robot_particles,
         std::string robot_model, bool use_initial_poses = true);
     virtual ~PSOPoseEstimator();
 
