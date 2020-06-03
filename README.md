@@ -18,14 +18,19 @@ First follow the installation instructions below.
 
 ### Running Gazebo
 (In a new terminal)
-To launch a Gazebo-simulated swarm of 20 robots with the Group Motion state machine: `$ roslaunch pulsar_gazebo multiple_robots.launch num_robots:=20 state_machine_type:=group_target`.
-To launch a Gazebo-simulated swarm of 10 robots with no state machine running: `$ roslaunch pulsar_gazebo multiple_robots.launch num_robots:=10 run_state_machine:=false`
+To launch a Gazebo-simulated swarm of 20 robots with the Group Motion state machine:
+`$ roslaunch pulsar_gazebo multiple_robots.launch num_robots:=20 state_machine_type:=group_target`.
+To launch a Gazebo-simulated swarm of 10 robots with no state machine running:
+`$ roslaunch pulsar_gazebo multiple_robots.launch num_robots:=10 run_state_machine:=false`
 
 ### Running Localisation Algorithms
 (With Gazebo running, in a new terminal)
-To launch PSOSwarmPoseEstimator with a swarm of 20 robots: `$ roslaunch pulsar_localisation localisation.launch num_robots:=20 localiser:=pso robot_model:=scan_matching`.
-To launch AverageMCLSwarmPoseEstimator with a swarm of 10 robots and the odometry robot model: `$ roslaunch pulsar_localisation localisation.launch num_robots:=10 localiser:=average_swarm_mcl robot_model:=odometry`.
-To launch MCLSwarmPoseEstimator with a swarm of 5 robots and the scan matching robot model, debugging using Valgrind//KCacheGrind: `$roslaunch pulsar_localisation localisation.launch num_robots:=5 localiser:=mcl robot_model:=scan_matching valgrind:=true`.
+To launch PSOSwarmPoseEstimator with a swarm of 20 robots:
+`$ roslaunch pulsar_localisation localisation.launch num_robots:=20 localiser:=pso robot_model:=scan_matching`.
+To launch AverageMCLSwarmPoseEstimator with a swarm of 10 robots and the odometry robot model:
+`$ roslaunch pulsar_localisation localisation.launch num_robots:=10 localiser:=average_swarm_mcl robot_model:=odometry`.
+To launch MCLSwarmPoseEstimator with a swarm of 5 robots and the scan matching robot model, debugging using Valgrind//KCacheGrind:
+`$roslaunch pulsar_localisation localisation.launch num_robots:=5 localiser:=mcl robot_model:=scan_matching valgrind:=true`.
 
 etc...
 
