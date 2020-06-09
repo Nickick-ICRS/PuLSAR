@@ -1,0 +1,337 @@
+EESchema Schematic File Version 4
+LIBS:encoder_pcb-cache
+EELAYER 29 0
+EELAYER END
+$Descr A4 11693 8268
+encoding utf-8
+Sheet 1 1
+Title ""
+Date ""
+Rev ""
+Comp ""
+Comment1 ""
+Comment2 ""
+Comment3 ""
+Comment4 ""
+$EndDescr
+$Comp
+L RS_Downloads:AS5047P-ATSM IC1
+U 1 1 5DCADD39
+P 4450 3550
+F 0 "IC1" H 5050 3815 50  0000 C CNN
+F 1 "AS5047P-ATSM" H 5050 3724 50  0000 C CNN
+F 2 "RS_Downloads:SOP65P640X120-14N" H 5500 3650 50  0001 L CNN
+F 3 "http://ams.com/eng/content/download/725051/1853902/379375" H 5500 3550 50  0001 L CNN
+F 4 "Board Mount Hall Effect / Magnetic Sensors 14 bit core res Up to 28krpm" H 5500 3450 50  0001 L CNN "Description"
+F 5 "1.2" H 5500 3350 50  0001 L CNN "Height"
+F 6 "" H 5500 3250 50  0001 L CNN "RS Part Number"
+F 7 "" H 5500 3150 50  0001 L CNN "RS Price/Stock"
+F 8 "ams" H 5500 3050 50  0001 L CNN "Manufacturer_Name"
+F 9 "AS5047P-ATSM" H 5500 2950 50  0001 L CNN "Manufacturer_Part_Number"
+	1    4450 3550
+	1    0    0    -1  
+$EndComp
+$Comp
+L Device:C C1
+U 1 1 5DCB5FC1
+P 6150 4100
+F 0 "C1" H 6265 4146 50  0000 L CNN
+F 1 "100nF" H 6265 4055 50  0000 L CNN
+F 2 "Capacitor_SMD:C_0805_2012Metric" H 6188 3950 50  0001 C CNN
+F 3 "~" H 6150 4100 50  0001 C CNN
+	1    6150 4100
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	5650 3750 6150 3750
+Wire Wire Line
+	6150 3750 6150 3850
+Wire Wire Line
+	5650 3850 6150 3850
+Connection ~ 6150 3850
+Wire Wire Line
+	6150 3850 6150 3950
+Wire Wire Line
+	6150 3850 6600 3850
+Text Label 6450 3850 0    50   ~ 0
+3V3_F
+Wire Wire Line
+	6150 4250 6150 4350
+Wire Wire Line
+	5650 3650 6300 3650
+Wire Wire Line
+	5650 3550 5850 3550
+Text Label 5650 3550 0    50   ~ 0
+INDEX_F
+$Comp
+L Device:R R1
+U 1 1 5DCBAC01
+P 3750 3400
+F 0 "R1" H 3820 3446 50  0000 L CNN
+F 1 "4.7k" H 3820 3355 50  0000 L CNN
+F 2 "Resistor_SMD:R_0805_2012Metric" V 3680 3400 50  0001 C CNN
+F 3 "~" H 3750 3400 50  0001 C CNN
+	1    3750 3400
+	1    0    0    -1  
+$EndComp
+$Comp
+L Device:R R2
+U 1 1 5DCBC3CA
+P 3400 4000
+F 0 "R2" H 3470 4046 50  0000 L CNN
+F 1 "4.7k" H 3470 3955 50  0000 L CNN
+F 2 "Resistor_SMD:R_0805_2012Metric" V 3330 4000 50  0001 C CNN
+F 3 "~" H 3400 4000 50  0001 C CNN
+	1    3400 4000
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	3750 3250 3750 3050
+Wire Wire Line
+	4450 4050 4150 4050
+Wire Wire Line
+	4450 4150 4150 4150
+Wire Wire Line
+	4450 3950 4050 3950
+Wire Wire Line
+	4050 3950 4050 4250
+Text Label 4150 3850 0    50   ~ 0
+MOSI_F
+Text Label 4150 4050 0    50   ~ 0
+B_F
+Text Label 4150 4150 0    50   ~ 0
+A_F
+Wire Wire Line
+	3750 3550 4450 3550
+Text Label 3750 3050 0    50   ~ 0
+VDD_F
+$Comp
+L Device:R R3
+U 1 1 5DCC39BA
+P 3750 4000
+F 0 "R3" H 3820 4046 50  0000 L CNN
+F 1 "4.7k" H 3820 3955 50  0000 L CNN
+F 2 "Resistor_SMD:R_0805_2012Metric" V 3680 4000 50  0001 C CNN
+F 3 "~" H 3750 4000 50  0001 C CNN
+	1    3750 4000
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	3750 3850 4450 3850
+Wire Wire Line
+	3750 4150 3750 4250
+Wire Wire Line
+	3750 4250 4050 4250
+Connection ~ 3750 4250
+Wire Wire Line
+	3750 4250 3750 4350
+Wire Wire Line
+	3400 4150 3400 4250
+Wire Wire Line
+	3400 4250 3750 4250
+Wire Wire Line
+	3400 3650 3400 3850
+Wire Wire Line
+	3400 3650 4450 3650
+Text Label 5700 3850 0    50   ~ 0
+VDD_F
+Wire Wire Line
+	2750 4000 3050 4000
+Wire Wire Line
+	2750 3900 3050 3900
+Wire Wire Line
+	2750 3800 3050 3800
+Wire Wire Line
+	2750 3700 3050 3700
+Text Label 2850 4000 0    50   ~ 0
+3V3_F
+Text Label 2850 3900 0    50   ~ 0
+GND_F
+Text Label 2950 3800 0    50   ~ 0
+A_F
+Text Label 2950 3700 0    50   ~ 0
+B_F
+$Comp
+L Connector_Generic:Conn_01x04 J1
+U 1 1 5DCCCC64
+P 2550 3900
+F 0 "J1" H 2468 3475 50  0001 C CNN
+F 1 "Conn_01x04" H 2468 3567 50  0000 C CNN
+F 2 "RS_Downloads:Connector_Pad_4x2.0x2.0mm" H 2550 3900 50  0001 C CNN
+F 3 "~" H 2550 3900 50  0001 C CNN
+	1    2550 3900
+	-1   0    0    1   
+$EndComp
+Text Label 4150 3550 0    50   ~ 0
+CS_F
+Text Label 6100 3650 0    50   ~ 0
+GND_F
+Text Label 6050 4450 0    50   ~ 0
+GND_F
+Text Label 3650 4450 0    50   ~ 0
+GND_F
+$Comp
+L RS_Downloads:AS5047P-ATSM IC2
+U 1 1 5DCF6EDC
+P 4450 5400
+F 0 "IC2" H 5050 5665 50  0000 C CNN
+F 1 "AS5047P-ATSM" H 5050 5574 50  0000 C CNN
+F 2 "RS_Downloads:SOP65P640X120-14N" H 5500 5500 50  0001 L CNN
+F 3 "http://ams.com/eng/content/download/725051/1853902/379375" H 5500 5400 50  0001 L CNN
+F 4 "Board Mount Hall Effect / Magnetic Sensors 14 bit core res Up to 28krpm" H 5500 5300 50  0001 L CNN "Description"
+F 5 "1.2" H 5500 5200 50  0001 L CNN "Height"
+F 6 "" H 5500 5100 50  0001 L CNN "RS Part Number"
+F 7 "" H 5500 5000 50  0001 L CNN "RS Price/Stock"
+F 8 "ams" H 5500 4900 50  0001 L CNN "Manufacturer_Name"
+F 9 "AS5047P-ATSM" H 5500 4800 50  0001 L CNN "Manufacturer_Part_Number"
+	1    4450 5400
+	1    0    0    -1  
+$EndComp
+$Comp
+L Device:C C2
+U 1 1 5DCF6EE2
+P 6150 5950
+F 0 "C2" H 6265 5996 50  0000 L CNN
+F 1 "100nF" H 6265 5905 50  0000 L CNN
+F 2 "Capacitor_SMD:C_0805_2012Metric" H 6188 5800 50  0001 C CNN
+F 3 "~" H 6150 5950 50  0001 C CNN
+	1    6150 5950
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	5650 5600 6150 5600
+Wire Wire Line
+	6150 5600 6150 5700
+Wire Wire Line
+	5650 5700 6150 5700
+Connection ~ 6150 5700
+Wire Wire Line
+	6150 5700 6150 5800
+Wire Wire Line
+	6150 5700 6600 5700
+Text Label 6450 5700 0    50   ~ 0
+3V3_B
+Wire Wire Line
+	6150 6100 6150 6200
+Wire Wire Line
+	5650 5500 6300 5500
+Wire Wire Line
+	5650 5400 5850 5400
+Text Label 5650 5400 0    50   ~ 0
+INDEX_B
+$Comp
+L Device:R R4
+U 1 1 5DCF6EF3
+P 3750 5250
+F 0 "R4" H 3820 5296 50  0000 L CNN
+F 1 "4.7k" H 3820 5205 50  0000 L CNN
+F 2 "Resistor_SMD:R_0805_2012Metric" V 3680 5250 50  0001 C CNN
+F 3 "~" H 3750 5250 50  0001 C CNN
+	1    3750 5250
+	1    0    0    -1  
+$EndComp
+$Comp
+L Device:R R5
+U 1 1 5DCF6EF9
+P 3400 5850
+F 0 "R5" H 3470 5896 50  0000 L CNN
+F 1 "4.7k" H 3470 5805 50  0000 L CNN
+F 2 "Resistor_SMD:R_0805_2012Metric" V 3330 5850 50  0001 C CNN
+F 3 "~" H 3400 5850 50  0001 C CNN
+	1    3400 5850
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	3750 5100 3750 4900
+Wire Wire Line
+	4450 5900 4150 5900
+Wire Wire Line
+	4450 6000 4150 6000
+Wire Wire Line
+	4450 5800 4050 5800
+Wire Wire Line
+	4050 5800 4050 6100
+Text Label 4150 5700 0    50   ~ 0
+MOSI_B
+Text Label 4150 5900 0    50   ~ 0
+B_B
+Text Label 4150 6000 0    50   ~ 0
+A_B
+Wire Wire Line
+	3750 5400 4450 5400
+Text Label 3750 4900 0    50   ~ 0
+VDD_B
+$Comp
+L Device:R R6
+U 1 1 5DCF6F0A
+P 3750 5850
+F 0 "R6" H 3820 5896 50  0000 L CNN
+F 1 "4.7k" H 3820 5805 50  0000 L CNN
+F 2 "Resistor_SMD:R_0805_2012Metric" V 3680 5850 50  0001 C CNN
+F 3 "~" H 3750 5850 50  0001 C CNN
+	1    3750 5850
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	3750 5700 4450 5700
+Wire Wire Line
+	3750 6000 3750 6100
+Wire Wire Line
+	3750 6100 4050 6100
+Connection ~ 3750 6100
+Wire Wire Line
+	3750 6100 3750 6200
+Wire Wire Line
+	3400 6000 3400 6100
+Wire Wire Line
+	3400 6100 3750 6100
+Wire Wire Line
+	3400 5500 3400 5700
+Wire Wire Line
+	3400 5500 4450 5500
+Text Label 5700 5700 0    50   ~ 0
+VDD_B
+Wire Wire Line
+	2750 5850 3050 5850
+Wire Wire Line
+	2750 5750 3050 5750
+Wire Wire Line
+	2750 5650 3050 5650
+Wire Wire Line
+	2750 5550 3050 5550
+Text Label 2850 5850 0    50   ~ 0
+3V3_B
+Text Label 2850 5750 0    50   ~ 0
+GND_B
+Text Label 2950 5650 0    50   ~ 0
+A_B
+Text Label 2950 5550 0    50   ~ 0
+B_B
+$Comp
+L Connector_Generic:Conn_01x04 J2
+U 1 1 5DCF6F22
+P 2550 5750
+F 0 "J2" H 2468 5325 50  0001 C CNN
+F 1 "Conn_01x04" H 2468 5417 50  0000 C CNN
+F 2 "RS_Downloads:Connector_Pad_4x2.0x2.0mm" H 2550 5750 50  0001 C CNN
+F 3 "~" H 2550 5750 50  0001 C CNN
+	1    2550 5750
+	-1   0    0    1   
+$EndComp
+Text Label 4150 5400 0    50   ~ 0
+CS_B
+Text Label 6100 5500 0    50   ~ 0
+GND_B
+Text Label 6050 6300 0    50   ~ 0
+GND_B
+Text Label 3650 6300 0    50   ~ 0
+GND_B
+Text Label 4150 5800 0    50   ~ 0
+GND_B
+Text Label 4150 3950 0    50   ~ 0
+GND_F
+Text Label 4150 5500 0    50   ~ 0
+CLK_B
+Text Label 4150 3650 0    50   ~ 0
+CLK_F
+$EndSCHEMATC
